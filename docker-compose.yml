@@ -1,0 +1,30 @@
+# Infrastructure for local development.
+# Ollama runs on the HOST (for GPU access), not here — the ai-service points at it via
+# OLLAMA_BASE_URL=http://host.docker.internal:11434.
+#
+# Application services (api, web, ai-service) are added to this file as each is scaffolded
+# during its milestone. For now this brings up the two datastores.
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: bpa-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Your_strong_Pass123" # dev only; override via .env in real use
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssql-data:/var/opt/mssql
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: bpa-chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/data
+
+volumes:
+  mssql-data:
+  chroma-data:
