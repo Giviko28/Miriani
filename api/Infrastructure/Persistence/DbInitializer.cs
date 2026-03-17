@@ -27,8 +27,15 @@ public static class DbInitializer
 
         await db.Database.MigrateAsync(ct);
 
+        // Ensure the single demo organization exists so processes can be seeded up front
+        // (registration attaches users to this same org).
         var org = await db.Organizations.FirstOrDefaultAsync(ct);
-        if (org is null) return; // No org yet (no users registered) — processes seed on first login flow.
+        if (org is null)
+        {
+            org = new Organization { Name = "Demo Company" };
+            db.Organizations.Add(org);
+            await db.SaveChangesAsync(ct);
+        }
 
         foreach (var (name, agentKey, description) in DemoProcesses)
         {
