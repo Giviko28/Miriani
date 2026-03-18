@@ -1,0 +1,52 @@
+using System.Net.Http.Json;
+using Application.Ai;
+using Domain.Enums;
+
+namespace Infrastructure.Ai;
+
+/// <summary>
+/// Typed HTTP client for the Python AI service. Maps the authenticated caller's role to the
+/// numeric role level the AI service uses for retrieval filtering.
+/// </summary>
+public class AiServiceClient(HttpClient http) : IAiService
+{
+    public async Task<int> IngestAsync(
+        Guid orgId, Guid docId, string fileName, UserRole accessRole, byte[] data, CancellationToken ct = default)
+    {
+        using var form = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(data);
+        form.Add(fileContent, "file", fileName);
+        form.Add(new StringContent(orgId.ToString()), "org_id");
+        form.Add(new StringContent(docId.ToString()), "doc_id");
+        form.Add(new StringContent(((int)accessRole).ToString()), "access_role");
+
+        var resp = await http.PostAsync("/ingest", form, ct);
+        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadFromJsonAsync<IngestBody>(ct);
+        return body?.Chunks ?? 0;
+    }
+
+    public async Task<AiAnswer> QueryAsync(Guid orgId, UserRole role, string query, CancellationToken ct = default)
+    {
+        var payload = new
+        {
+            org_id = orgId.ToString(),
+            role_level = (int)role,
+            query,
+        };
+
+        var resp = await http.PostAsJsonAsync("/rag/query", payload, ct);
+        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadFromJsonAsync<QueryBody>(ct)
+                   ?? new QueryBody("", false, []);
+
+        var sources = body.Sources
+            .Select(s => new AiSource(s.Doc_Id, s.File_Name, s.Chunk_Index, s.Distance, s.Text))
+            .ToList();
+        return new AiAnswer(body.Answer, body.Used_Context, sources);
+    }
+
+    private record IngestBody(string Doc_Id, int Chunks);
+    private record QueryBody(string Answer, bool Used_Context, List<SourceBody> Sources);
+    private record SourceBody(string Doc_Id, string File_Name, int Chunk_Index, double Distance, string Text);
+}
