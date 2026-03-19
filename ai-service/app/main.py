@@ -6,6 +6,7 @@ Endpoints:
   POST /ingest        store a document in the vector store (org + role scoped)
   POST /rag/retrieve  role-scoped retrieval only (no generation)
   POST /rag/query     role-scoped retrieval + grounded LLM answer
+  POST /agent/run     route the request to a specialized agent (LangGraph)
 """
 
 import time
@@ -14,6 +15,7 @@ import httpx
 from fastapi import FastAPI, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from app.agents.graph import run_agents
 from app.config import settings
 from app.ingestion.extract import UnsupportedFileType
 from app.rag import service as rag
@@ -142,4 +144,36 @@ async def rag_query(req: QueryRequest) -> QueryResponse:
         answer=result.answer,
         used_context=result.used_context,
         sources=_to_dto(result.sources),
+    )
+
+
+# ---------- Agents ----------
+
+class AgentRequest(BaseModel):
+    org_id: str
+    role_level: int = 0
+    query: str
+
+
+class AgentResponse(BaseModel):
+    route: str
+    answer: str
+    used_context: bool
+    sources: list[SourceDto]
+    structured: dict | None = None
+
+
+@app.post("/agent/run", response_model=AgentResponse)
+async def agent_run(req: AgentRequest) -> AgentResponse:
+    """Route the request to the right specialized agent and return its result."""
+    state = await run_agents(
+        org_id=req.org_id, role_level=req.role_level, query=req.query
+    )
+    sources = [SourceDto(**s) for s in state.get("sources", [])]
+    return AgentResponse(
+        route=state.get("route", ""),
+        answer=state.get("answer", ""),
+        used_context=state.get("used_context", False),
+        sources=sources,
+        structured=state.get("structured"),
     )
