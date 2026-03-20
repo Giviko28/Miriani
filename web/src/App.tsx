@@ -1,66 +1,63 @@
 import { useState } from "react";
+import { AuthProvider, ROLE_NAMES, useAuth } from "./auth";
+import { Badge } from "./ui";
+import { Login } from "./views/Login";
+import { Documents } from "./views/Documents";
+import { Assistant } from "./views/Assistant";
 
-// Smoke-test page. Proves React -> .NET API -> Python AI service -> Ollama.
-// The real UI (Tailwind + shadcn) is built in Milestone 6.
+type View = "assistant" | "documents";
 
-const API_BASE = "http://localhost:5080";
+function Shell() {
+  const { session, logout } = useAuth();
+  const [view, setView] = useState<View>("assistant");
 
-type PingResult = {
-  model: string;
-  reply: string;
-  elapsed_Seconds: number;
-};
+  if (!session) return <Login />;
 
-export default function App() {
-  const [prompt, setPrompt] = useState("Say hello in one short sentence.");
-  const [result, setResult] = useState<PingResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  async function send() {
-    setLoading(true);
-    setError(null);
-    setResult(null);
-    try {
-      const res = await fetch(`${API_BASE}/api/smoke/ping-llm`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      });
-      if (!res.ok) throw new Error(`API returned ${res.status}`);
-      setResult(await res.json());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }
+  const tabs: { key: View; label: string }[] = [
+    { key: "assistant", label: "AI Assistant" },
+    { key: "documents", label: "Documents" },
+  ];
 
   return (
-    <main style={{ maxWidth: 640, margin: "3rem auto", fontFamily: "system-ui", padding: "0 1rem" }}>
-      <h1>BPA — Integration Smoke Test</h1>
-      <p style={{ color: "#666" }}>React → .NET API → Python AI service → Ollama (local LLM)</p>
-
-      <textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        rows={3}
-        style={{ width: "100%", padding: 8, fontSize: 14 }}
-      />
-      <button onClick={send} disabled={loading} style={{ marginTop: 8, padding: "8px 16px" }}>
-        {loading ? "Asking the LLM…" : "Send"}
-      </button>
-
-      {error && <p style={{ color: "crimson" }}>Error: {error}</p>}
-
-      {result && (
-        <div style={{ marginTop: 16, padding: 16, border: "1px solid #ddd", borderRadius: 8 }}>
-          <p><strong>Reply:</strong> {result.reply}</p>
-          <p style={{ color: "#666", fontSize: 13 }}>
-            model: {result.model} · {result.elapsed_Seconds}s
-          </p>
+    <div className="min-h-screen">
+      <header className="border-b border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-6">
+            <span className="font-semibold">BPA</span>
+            <nav className="flex gap-1">
+              {tabs.map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setView(t.key)}
+                  className={
+                    "rounded-md px-3 py-1.5 text-sm font-medium " +
+                    (view === t.key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100")
+                  }
+                >
+                  {t.label}
+                </button>
+              ))}
+            </nav>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-slate-600">{session.displayName}</span>
+            <Badge tone="blue">{ROLE_NAMES[session.role]}</Badge>
+            <button onClick={logout} className="text-slate-500 hover:text-slate-800">Sign out</button>
+          </div>
         </div>
-      )}
-    </main>
+      </header>
+
+      <main className="mx-auto max-w-4xl px-4 py-6">
+        {view === "assistant" ? <Assistant /> : <Documents />}
+      </main>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <Shell />
+    </AuthProvider>
   );
 }
