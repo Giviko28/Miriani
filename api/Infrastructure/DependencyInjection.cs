@@ -1,7 +1,9 @@
 using Application.Ai;
 using Application.Auth;
+using Application.Common;
 using Application.Documents;
 using Infrastructure.Ai;
+using Infrastructure.Audit;
 using Infrastructure.Auth;
 using Infrastructure.Documents;
 using Infrastructure.Persistence;
@@ -26,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
 
+        services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<IFileStorage, LocalFileStorage>();
         services.AddScoped<IDocumentService, DocumentService>();
 

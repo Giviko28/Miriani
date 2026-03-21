@@ -8,7 +8,7 @@ namespace Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/ai")]
-public class AiController(IAiService ai, ICurrentUser currentUser) : ControllerBase
+public class AiController(IAiService ai, ICurrentUser currentUser, IAuditLogger audit) : ControllerBase
 {
     public record QueryRequest(string Query);
 
@@ -26,6 +26,7 @@ public class AiController(IAiService ai, ICurrentUser currentUser) : ControllerB
         try
         {
             var answer = await ai.QueryAsync(currentUser.OrgId, currentUser.Role, req.Query, ct);
+            await audit.LogAsync(currentUser.OrgId, currentUser.UserId, "ai.query", req.Query, ct);
             return Ok(answer);
         }
         catch (HttpRequestException ex)
@@ -48,6 +49,8 @@ public class AiController(IAiService ai, ICurrentUser currentUser) : ControllerB
         try
         {
             var result = await ai.RunAgentAsync(currentUser.OrgId, currentUser.Role, req.Query, ct);
+            await audit.LogAsync(currentUser.OrgId, currentUser.UserId, "ai.agent",
+                $"[{result.Route}] {req.Query}", ct);
             return Ok(result);
         }
         catch (HttpRequestException ex)
