@@ -88,4 +88,14 @@ export const api = {
   },
 
   runAgent: (query: string) => request<AgentResult>("/api/ai/agent", jsonBody({ query })),
+
+  listAudit: () => request<AuditEntry[]>("/api/audit?take=100"),
+};
+
+export type AuditEntry = {
+  id: number;
+  userId: string | null;
+  action: string;
+  detail: string | null;
+  createdAt: string;
 };

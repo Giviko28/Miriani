@@ -4,8 +4,11 @@ import { Badge } from "./ui";
 import { Login } from "./views/Login";
 import { Documents } from "./views/Documents";
 import { Assistant } from "./views/Assistant";
+import { Audit } from "./views/Audit";
 
-type View = "assistant" | "documents";
+type View = "assistant" | "documents" | "audit";
+
+const ADMIN_ROLE = 2;
 
 function Shell() {
   const { session, logout } = useAuth();
@@ -16,6 +19,7 @@ function Shell() {
   const tabs: { key: View; label: string }[] = [
     { key: "assistant", label: "AI Assistant" },
     { key: "documents", label: "Documents" },
+    ...(session.role === ADMIN_ROLE ? [{ key: "audit" as View, label: "Audit" }] : []),
   ];
 
   return (
@@ -48,7 +52,9 @@ function Shell() {
       </header>
 
       <main className="mx-auto max-w-4xl px-4 py-6">
-        {view === "assistant" ? <Assistant /> : <Documents />}
+        {view === "assistant" && <Assistant />}
+        {view === "documents" && <Documents />}
+        {view === "audit" && <Audit />}
       </main>
     </div>
   );
