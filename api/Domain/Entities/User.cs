@@ -17,5 +17,11 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public UserRole Role { get; set; } = UserRole.Employee;
 
+    /// <summary>Disabled users cannot log in or refresh; their tokens are revoked.</summary>
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>Set for admin-created users; forces a password change on first login.</summary>
+    public bool MustChangePassword { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
