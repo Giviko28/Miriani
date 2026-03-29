@@ -1,5 +1,8 @@
+using Application.Auth;
 using Domain.Entities;
+using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.Persistence;
@@ -20,10 +23,19 @@ public static class DbInitializer
         ("Invoice Generation", "invoice_gen", "Generate a structured invoice from provided details."),
     ];
 
+    private static readonly string[] StarterFaqs =
+    [
+        "What is our remote work policy?",
+        "How do I submit an expense report?",
+        "How many vacation days do I get?",
+    ];
+
     public static async Task InitializeAsync(IServiceProvider services, CancellationToken ct = default)
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+        var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 
         await db.Database.MigrateAsync(ct);
 
@@ -51,6 +63,47 @@ public static class DbInitializer
                 });
             }
         }
+        await db.SaveChangesAsync(ct);
+
+        await SeedRootAdminAsync(db, hasher, config, org.Id, ct);
+        await SeedFaqsAsync(db, org.Id, ct);
+    }
+
+    /// <summary>Create a root admin if the org has no admin yet, so the system is usable on first run.</summary>
+    private static async Task SeedRootAdminAsync(
+        AppDbContext db, IPasswordHasher hasher, IConfiguration config, Guid orgId, CancellationToken ct)
+    {
+        var hasAdmin = await db.Users.AnyAsync(u => u.OrgId == orgId && u.Role == UserRole.Admin, ct);
+        if (hasAdmin) return;
+
+        const string email = "admin@bpa.local";
+        var password = config["Seed:RootAdminPassword"];
+        if (string.IsNullOrWhiteSpace(password)) password = "ChangeMe!123";
+
+        db.Users.Add(new User
+        {
+            OrgId = orgId,
+            Email = email,
+            DisplayName = "Root Admin",
+            Role = UserRole.Admin,
+            PasswordHash = hasher.Hash(password),
+            MustChangePassword = false,
+            IsActive = true,
+        });
+        await db.SaveChangesAsync(ct);
+
+        Console.WriteLine("========================================================");
+        Console.WriteLine($"  Seeded root admin: {email} / {password}");
+        Console.WriteLine("  Change this password after first sign-in.");
+        Console.WriteLine("========================================================");
+    }
+
+    private static async Task SeedFaqsAsync(AppDbContext db, Guid orgId, CancellationToken ct)
+    {
+        if (await db.Faqs.AnyAsync(f => f.OrgId == orgId, ct)) return;
+
+        for (var i = 0; i < StarterFaqs.Length; i++)
+            db.Faqs.Add(new Faq { OrgId = orgId, Question = StarterFaqs[i], SortOrder = i + 1 });
         await db.SaveChangesAsync(ct);
     }
 }
