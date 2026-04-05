@@ -3,15 +3,17 @@ import { ROLE_NAMES, useAuth } from "../auth";
 import { Badge } from "../ui";
 import { ChangePassword } from "../views/ChangePassword";
 import { Overview } from "./pages/Overview";
+import { AssistantPage } from "./pages/AssistantPage";
 import { Users } from "./pages/Users";
 import { Knowledge } from "./pages/Knowledge";
 import { Faqs } from "./pages/Faqs";
 import { Audit } from "../views/Audit";
 
-type Section = "overview" | "users" | "knowledge" | "faqs" | "audit" | "password";
+type Section = "overview" | "assistant" | "users" | "knowledge" | "faqs" | "audit" | "password";
 
 const NAV: { key: Section; label: string }[] = [
   { key: "overview", label: "Overview" },
+  { key: "assistant", label: "AI Assistant" },
   { key: "users", label: "Users" },
   { key: "knowledge", label: "Knowledge" },
   { key: "faqs", label: "FAQs" },
@@ -60,6 +62,7 @@ export function AdminApp() {
       <main className="flex-1 overflow-auto">
         <div className="mx-auto max-w-4xl px-6 py-8">
           {section === "overview" && <Overview />}
+          {section === "assistant" && <AssistantPage />}
           {section === "users" && <Users />}
           {section === "knowledge" && <Knowledge />}
           {section === "faqs" && <Faqs />}
