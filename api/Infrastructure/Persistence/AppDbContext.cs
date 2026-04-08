@@ -16,6 +16,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Faq> Faqs => Set<Faq>();
+    public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -75,6 +77,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Question).HasMaxLength(500).IsRequired();
             e.HasOne(x => x.Org).WithMany().HasForeignKey(x => x.OrgId);
             e.HasIndex(x => new { x.OrgId, x.SortOrder });
+        });
+
+        b.Entity<ChatSession>(e =>
+        {
+            e.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            e.HasIndex(x => new { x.UserId, x.UpdatedAt });
+            e.HasMany(x => x.Messages).WithOne(m => m.Session)
+                .HasForeignKey(m => m.SessionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<ChatMessage>(e =>
+        {
+            e.Property(x => x.Sender).HasMaxLength(16).IsRequired();
+            e.Property(x => x.Content).IsRequired();
+            e.Property(x => x.Route).HasMaxLength(32);
+            e.HasIndex(x => new { x.SessionId, x.CreatedAt });
         });
     }
 }
