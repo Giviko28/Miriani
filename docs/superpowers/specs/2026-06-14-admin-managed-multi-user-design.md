@@ -32,7 +32,7 @@ plus one EF migration.
 - A **root admin is seeded on startup** if no admin exists:
   - Email `admin@bpa.local`, display name `Root Admin`, role `Admin`.
   - Password from config key `Seed:RootAdminPassword` (default `ChangeMe!123`), printed
-    once to the console on first creation and noted in `CLAUDE.md`.
+    once to the console on first creation and noted in `docs/ARCHITECTURE.md`.
   - The root admin's `MustChangePassword` is **false** so the live demo works immediately;
     the console message recommends changing it.
 - Document `access_role` remains the "who can use this data" mechanism, now set only by
