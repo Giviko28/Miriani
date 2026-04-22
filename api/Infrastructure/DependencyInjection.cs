@@ -2,12 +2,16 @@ using Application.Ai;
 using Application.Auth;
 using Application.Common;
 using Application.Documents;
+using Application.Faqs;
+using Application.Users;
 using Infrastructure.Ai;
 using Infrastructure.Audit;
 using Infrastructure.Auth;
 using Infrastructure.Documents;
+using Infrastructure.Faqs;
 using Infrastructure.Persistence;
 using Infrastructure.Storage;
+using Infrastructure.Users;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +35,8 @@ public static class DependencyInjection
         services.AddScoped<IAuditLogger, AuditLogger>();
         services.AddScoped<IFileStorage, LocalFileStorage>();
         services.AddScoped<IDocumentService, DocumentService>();
+        services.AddScoped<IUserAdminService, UserAdminService>();
+        services.AddScoped<IFaqService, FaqService>();
 
         // Typed client for the Python AI service.
         var aiBaseUrl = config["AiService:BaseUrl"] ?? "http://localhost:8001";
