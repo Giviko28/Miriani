@@ -48,7 +48,7 @@ public class AiController(IAiService ai, ICurrentUser currentUser, IAuditLogger 
 
         try
         {
-            var result = await ai.RunAgentAsync(currentUser.OrgId, currentUser.Role, req.Query, ct);
+            var result = await ai.RunAgentAsync(currentUser.OrgId, currentUser.Role, req.Query, history: null, ct: ct);
             await audit.LogAsync(currentUser.OrgId, currentUser.UserId, "ai.agent",
                 $"[{result.Route}] {req.Query}", ct);
             return Ok(result);

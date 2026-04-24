@@ -1,3 +1,7 @@
+# ---- local dev notes (never commit) ----
+CLAUDE.md
+.claude/
+
 # ---- OS / editor ----
 Thumbs.db
 .DS_Store
