@@ -11,6 +11,15 @@ from app.agents.state import AgentState
 from app.llm.client import generate
 from app.rag import service as rag
 
+# Miriani's character — injected into every specialist system prompt.
+_PERSONA = (
+    "You are Miriani, a warm and professional AI business assistant. "
+    "You go by Mirian for short. "
+    "You are knowledgeable, reliable, and genuinely enjoy helping people. "
+    "You keep a friendly but professional tone at all times. "
+    "If someone asks who you are, introduce yourself as Miriani. "
+)
+
 
 def _sources_to_dicts(sources) -> list[dict]:
     return [
@@ -40,6 +49,27 @@ def _history_block(state: AgentState) -> str:
     return "Conversation so far:\n" + "\n".join(lines) + "\n\n"
 
 
+async def greeting(state: AgentState) -> AgentState:
+    """Respond to greetings, introductions, and casual conversation as Miriani."""
+    prompt = (
+        f"{_history_block(state)}"
+        f"The user said: {state['query']}\n\n"
+        "Always start by introducing yourself as Miriani (or Mirian for short). "
+        "Greet them back warmly, acknowledge their name if they gave one, and briefly mention "
+        "what you can help with (company policies, document summaries, emails, reports, invoices). "
+        "Keep it short, friendly, and natural — 2 to 4 sentences, no bullet lists."
+    )
+    reply = await generate(
+        prompt,
+        system=(
+            _PERSONA +
+            "You are having a casual, friendly conversation. "
+            "Always introduce yourself by name (Miriani) early in your reply."
+        ),
+    )
+    return {"answer": reply, "used_context": False, "sources": [], "structured": None}
+
+
 async def policy_qa(state: AgentState) -> AgentState:
     """Answer a question grounded in role-scoped company documents."""
     result = await rag.answer(
@@ -66,7 +96,7 @@ async def doc_summary(state: AgentState) -> AgentState:
         f"{_history_block(state)}"
         f"Summarize the following content into 3-5 concise bullet points.\n\n{context}"
     )
-    reply = await generate(prompt, system="You are a precise business summarizer. Use only the given content.")
+    reply = await generate(prompt, system=_PERSONA + "You are a precise business summarizer. Use only the given content.")
     return {"answer": reply, "used_context": True, "sources": _sources_to_dicts(sources), "structured": None}
 
 
@@ -80,7 +110,7 @@ async def email_draft(state: AgentState) -> AgentState:
         f"Write a professional business email for this request:\n{state['query']}\n\n"
         "Include a subject line. Keep it concise and courteous."
     )
-    reply = await generate(prompt, system="You draft clear, professional business emails.")
+    reply = await generate(prompt, system=_PERSONA + "You draft clear, professional business emails.")
     return {"answer": reply, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
 
 
@@ -94,7 +124,7 @@ async def report_draft(state: AgentState) -> AgentState:
         f"Write a structured business report for this request:\n{state['query']}\n\n"
         "Use clear headings (Summary, Details, Recommendations)."
     )
-    reply = await generate(prompt, system="You write structured, factual business reports.")
+    reply = await generate(prompt, system=_PERSONA + "You write structured, factual business reports.")
     return {"answer": reply, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
 
 
@@ -156,6 +186,7 @@ def _parse_json(raw: str) -> dict | None:
 
 # Map agent keys to their node functions (consumed by the graph builder).
 SPECIALISTS = {
+    "greeting": greeting,
     "policy_qa": policy_qa,
     "doc_summary": doc_summary,
     "email_draft": email_draft,
