@@ -157,6 +157,90 @@ async def invoice_gen(state: AgentState) -> AgentState:
     return {"answer": summary, "used_context": False, "sources": [], "structured": structured}
 
 
+async def leave_request(state: AgentState) -> AgentState:
+    """Process a leave request: check policy, assess eligibility, generate formal letter."""
+    sources = _retrieve(state)
+    context = "\n\n".join(s.text for s in sources)
+    context_block = f"Company leave policy:\n{context}\n\n" if context else ""
+    prompt = (
+        f"{_history_block(state)}{context_block}"
+        f"Employee leave request: {state['query']}\n\n"
+        "Extract the request details and assess eligibility against any policy provided. "
+        "Return ONLY a JSON object with keys: "
+        "employee_name (string or null), start_date (string), end_date (string), "
+        "days_requested (number), status (one of: approved, pending, flagged), "
+        "policy_note (string — one sentence explaining the policy check result), "
+        "formal_letter (string — a short formal leave request letter the employee can send). "
+        "If no policy is available, set status to pending and note that HR review is needed."
+    )
+    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.")
+    structured = _parse_json(raw)
+    if structured is None:
+        return {"answer": raw, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
+    summary = (
+        f"Leave request for {structured.get('days_requested', '?')} day(s) "
+        f"({structured.get('start_date', '')} – {structured.get('end_date', '')}): "
+        f"{structured.get('status', 'pending').upper()}. {structured.get('policy_note', '')}"
+    )
+    return {"answer": summary, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": structured}
+
+
+async def onboarding_gen(state: AgentState) -> AgentState:
+    """Generate a role-specific onboarding checklist grounded in company policy docs."""
+    sources = _retrieve(state)
+    context = "\n\n".join(s.text for s in sources)
+    context_block = f"Company policies and procedures:\n{context}\n\n" if context else ""
+    prompt = (
+        f"{_history_block(state)}{context_block}"
+        f"Onboarding request: {state['query']}\n\n"
+        "Generate a structured onboarding plan. "
+        "Return ONLY a JSON object with keys: "
+        "role (string), employee_name (string or null), start_date (string or null), "
+        "day_1 (array of strings — tasks for the first day), "
+        "week_1 (array of strings — tasks for the first week), "
+        "month_1 (array of strings — tasks for the first month). "
+        "Base tasks on the company policies where available. Aim for 4-6 items per phase."
+    )
+    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.")
+    structured = _parse_json(raw)
+    if structured is None:
+        return {"answer": raw, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
+    role = structured.get("role") or "new employee"
+    total = (
+        len(structured.get("day_1") or []) +
+        len(structured.get("week_1") or []) +
+        len(structured.get("month_1") or [])
+    )
+    summary = f"Onboarding plan for {role} — {total} tasks across Day 1, Week 1, and Month 1."
+    return {"answer": summary, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": structured}
+
+
+async def contract_scan(state: AgentState) -> AgentState:
+    """Scan a vendor contract or agreement for risks relative to company policy."""
+    sources = _retrieve(state)
+    context = "\n\n".join(s.text for s in sources)
+    context_block = f"Available company documents (policies and/or contract content):\n{context}\n\n" if context else ""
+    prompt = (
+        f"{_history_block(state)}{context_block}"
+        f"Contract scan request: {state['query']}\n\n"
+        "Analyze the documents for contractual risks relative to company policy. "
+        "Return ONLY a JSON object with keys: "
+        "overall_risk (one of: Low, Medium, High), "
+        "clauses (array of objects, each with: clause (string), risk (Low/Medium/High), finding (string)), "
+        "recommendations (array of strings — concrete next steps). "
+        "If no contract content is found, set overall_risk to Medium and note that a document should be uploaded."
+    )
+    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.")
+    structured = _parse_json(raw)
+    if structured is None:
+        return {"answer": raw, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
+    overall = structured.get("overall_risk", "Unknown")
+    n_clauses = len(structured.get("clauses") or [])
+    high = sum(1 for c in (structured.get("clauses") or []) if c.get("risk") == "High")
+    summary = f"Contract scan complete — overall risk: {overall}. {n_clauses} clause(s) reviewed, {high} high-risk finding(s)."
+    return {"answer": summary, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": structured}
+
+
 def _find_number(item: dict, names: tuple[str, ...]) -> float:
     """Find a numeric value in an item dict by trying several key names (and a
     case-insensitive, underscore-stripped match) so totals survive LLM key drift."""
@@ -192,4 +276,7 @@ SPECIALISTS = {
     "email_draft": email_draft,
     "report_draft": report_draft,
     "invoice_gen": invoice_gen,
+    "leave_request": leave_request,
+    "onboarding_gen": onboarding_gen,
+    "contract_scan": contract_scan,
 }

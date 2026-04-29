@@ -26,6 +26,12 @@ _KEYWORD_HINTS = {
     "email_draft": ("email", "e-mail", "write to", "reply to"),
     "report_draft": ("report",),
     "doc_summary": ("summar", "tl;dr", "tldr", "key points"),
+    "leave_request": ("leave", "time off", "day off", "days off", "vacation", "annual leave",
+                      "pto", "holiday request", "request leave", "take leave"),
+    "onboarding_gen": ("onboard", "onboarding", "new hire", "new employee", "new staff",
+                       "joining", "first day", "checklist for"),
+    "contract_scan": ("contract", "vendor", "agreement", "risk", "scan contract",
+                      "review contract", "check contract", "risky clause"),
 }
 
 
