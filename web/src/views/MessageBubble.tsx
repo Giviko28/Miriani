@@ -22,6 +22,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   leave_request: "Leave Request",
   onboarding_gen: "Onboarding Kit",
   contract_scan: "Contract Scanner",
+  db_query: "Database Query",
 };
 
 type ParsedSource = { fileName: string; distance: number; text: string };
@@ -184,11 +185,52 @@ function InvoiceCard({ data }: { data: any }) {
   );
 }
 
+function DbQueryCard({ data }: { data: any }) {
+  const rows: Record<string, unknown>[] = data.rows ?? [];
+  const sql: string = data.sql ?? "";
+  const total: number = data.total_rows ?? rows.length;
+  const headers = rows.length > 0 ? Object.keys(rows[0]) : [];
+  return (
+    <div className="mt-4 space-y-3">
+      {sql && (
+        <details className="rounded-md border border-slate-200">
+          <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-slate-700">SQL Query</summary>
+          <pre className="whitespace-pre-wrap px-3 pb-3 pt-1 text-xs text-slate-500">{sql}</pre>
+        </details>
+      )}
+      {rows.length > 0 ? (
+        <div className="overflow-auto">
+          <p className="mb-1 text-xs text-slate-400">{total} row{total !== 1 ? "s" : ""}{total > 20 ? " (showing first 20)" : ""}</p>
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-slate-500">
+                {headers.map(h => <th key={h} className="pb-1 pr-4 font-medium">{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={i} className="border-b border-slate-100">
+                  {headers.map(h => (
+                    <td key={h} className="py-1.5 pr-4 text-slate-700">{String(row[h] ?? "")}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-400">No rows returned.</p>
+      )}
+    </div>
+  );
+}
+
 function StructuredCard({ route, data }: { route: string; data: unknown }) {
   if (route === "leave_request") return <LeaveCard data={data} />;
   if (route === "onboarding_gen") return <OnboardingCard data={data} />;
   if (route === "contract_scan") return <ContractCard data={data} />;
   if (route === "invoice_gen") return <InvoiceCard data={data} />;
+  if (route === "db_query") return <DbQueryCard data={data} />;
   return (
     <pre className="mt-4 overflow-auto rounded-md bg-slate-900 p-4 text-xs text-slate-100">
       {JSON.stringify(data, null, 2)}

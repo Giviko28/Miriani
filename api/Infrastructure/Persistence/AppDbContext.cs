@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Faq> Faqs => Set<Faq>();
     public DbSet<ChatSession> ChatSessions => Set<ChatSession>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<OrgDbConfig> OrgDbConfigs => Set<OrgDbConfig>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -93,6 +94,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Content).IsRequired();
             e.Property(x => x.Route).HasMaxLength(32);
             e.HasIndex(x => new { x.SessionId, x.CreatedAt });
+        });
+
+        b.Entity<OrgDbConfig>(e =>
+        {
+            e.Property(x => x.DbType).HasMaxLength(32).IsRequired();
+            e.Property(x => x.ConnectionString).HasMaxLength(2000).IsRequired();
+            e.HasOne(x => x.Org).WithMany().HasForeignKey(x => x.OrgId);
+            e.HasIndex(x => x.OrgId).IsUnique();
         });
     }
 }

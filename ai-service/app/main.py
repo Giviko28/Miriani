@@ -17,6 +17,8 @@ from pydantic import BaseModel
 
 from app.agents.graph import run_agents
 from app.config import settings
+from app.db import connector as db_connector
+from app.db import schema_cache
 from app.ingestion.extract import UnsupportedFileType
 from app.rag import service as rag
 from app.rag.store import vector_store
@@ -145,6 +147,44 @@ async def rag_query(req: QueryRequest) -> QueryResponse:
         used_context=result.used_context,
         sources=_to_dto(result.sources),
     )
+
+
+# ---------- External DB ----------
+
+class DbConnectRequest(BaseModel):
+    org_id: str
+    connection_string: str
+
+
+class DbSchemaResponse(BaseModel):
+    org_id: str
+    tables: list[dict]
+
+
+@app.post("/db/connect", response_model=DbSchemaResponse)
+def db_connect(req: DbConnectRequest) -> DbSchemaResponse:
+    """Introspect the target DB schema and cache it for the org."""
+    try:
+        schema = db_connector.introspect(req.connection_string)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Connection failed: {exc}") from exc
+    schema_cache.save(req.org_id, req.connection_string, schema)
+    return DbSchemaResponse(org_id=req.org_id, tables=schema["tables"])
+
+
+@app.get("/db/schema/{org_id}", response_model=DbSchemaResponse)
+def db_get_schema(org_id: str) -> DbSchemaResponse:
+    """Return the cached schema for an org, or 404 if not connected."""
+    schema = schema_cache.get_schema(org_id)
+    if schema is None:
+        raise HTTPException(status_code=404, detail="No database connected for this org.")
+    return DbSchemaResponse(org_id=org_id, tables=schema["tables"])
+
+
+@app.delete("/db/disconnect/{org_id}", status_code=204)
+def db_disconnect(org_id: str) -> None:
+    """Remove the cached DB config for an org."""
+    schema_cache.delete(org_id)
 
 
 # ---------- Agents ----------

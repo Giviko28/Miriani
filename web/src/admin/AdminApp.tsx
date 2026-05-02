@@ -7,9 +7,10 @@ import { AssistantPage } from "./pages/AssistantPage";
 import { Users } from "./pages/Users";
 import { Knowledge } from "./pages/Knowledge";
 import { Faqs } from "./pages/Faqs";
+import { Database } from "./pages/Database";
 import { Audit } from "../views/Audit";
 
-type Section = "overview" | "assistant" | "users" | "knowledge" | "faqs" | "audit" | "password";
+type Section = "overview" | "assistant" | "users" | "knowledge" | "faqs" | "database" | "audit" | "password";
 
 const NAV: { key: Section; label: string }[] = [
   { key: "overview", label: "Overview" },
@@ -17,6 +18,7 @@ const NAV: { key: Section; label: string }[] = [
   { key: "users", label: "Users" },
   { key: "knowledge", label: "Knowledge" },
   { key: "faqs", label: "FAQs" },
+  { key: "database", label: "Database" },
   { key: "audit", label: "Audit" },
 ];
 
@@ -66,6 +68,7 @@ export function AdminApp() {
           {section === "users" && <Users />}
           {section === "knowledge" && <Knowledge />}
           {section === "faqs" && <Faqs />}
+          {section === "database" && <Database />}
           {section === "audit" && <Audit />}
           {section === "password" && (
             <div className="max-w-sm">

@@ -8,6 +8,8 @@ invoice_gen produces structured JSON.
 import json
 
 from app.agents.state import AgentState
+from app.db import connector as db_connector
+from app.db import schema_cache
 from app.llm.client import generate
 from app.rag import service as rag
 
@@ -157,19 +159,47 @@ async def invoice_gen(state: AgentState) -> AgentState:
     return {"answer": summary, "used_context": False, "sources": [], "structured": structured}
 
 
+def _db_vacation_context(org_id: str, query: str) -> str:
+    """Query the connected DB for existing vacation/leave records near the requested dates."""
+    cached = schema_cache.load(org_id)
+    if not cached:
+        return ""
+    schema = cached["schema"]
+    conn_str = cached["connection_string"]
+    vacation_table = next(
+        (t["name"] for t in schema.get("tables", [])
+         if t["name"].lower() in ("vacations", "leaves", "leave_requests", "time_off", "absences")),
+        None,
+    )
+    if not vacation_table:
+        return ""
+    try:
+        rows = db_connector.execute_select(conn_str, f"SELECT * FROM {vacation_table} LIMIT 50")
+        if not rows:
+            return f"\nThe {vacation_table} table is empty (no scheduled leave yet).\n"
+        rows_text = json.dumps(rows, indent=2, default=str)
+        return f"\nExisting records from the {vacation_table} table:\n{rows_text}\n"
+    except Exception:
+        return ""
+
+
 async def leave_request(state: AgentState) -> AgentState:
-    """Process a leave request: check policy, assess eligibility, generate formal letter."""
+    """Process a leave request: check policy + live DB schedule, assess eligibility, generate formal letter."""
     sources = _retrieve(state)
     context = "\n\n".join(s.text for s in sources)
     context_block = f"Company leave policy:\n{context}\n\n" if context else ""
+    db_block = _db_vacation_context(state["org_id"], state["query"])
     prompt = (
         f"{_history_block(state)}{context_block}"
+        f"{db_block}"
         f"Employee leave request: {state['query']}\n\n"
         "Extract the request details and assess eligibility against any policy provided. "
+        "If existing leave records are shown, check for scheduling conflicts. "
         "Return ONLY a JSON object with keys: "
         "employee_name (string or null), start_date (string), end_date (string), "
         "days_requested (number), status (one of: approved, pending, flagged), "
         "policy_note (string — one sentence explaining the policy check result), "
+        "conflict_note (string or null — mention any scheduling conflicts found in the DB), "
         "formal_letter (string — a short formal leave request letter the employee can send). "
         "If no policy is available, set status to pending and note that HR review is needed."
     )
@@ -182,7 +212,7 @@ async def leave_request(state: AgentState) -> AgentState:
         f"({structured.get('start_date', '')} – {structured.get('end_date', '')}): "
         f"{structured.get('status', 'pending').upper()}. {structured.get('policy_note', '')}"
     )
-    return {"answer": summary, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": structured}
+    return {"answer": summary, "used_context": bool(context or db_block), "sources": _sources_to_dicts(sources), "structured": structured}
 
 
 async def onboarding_gen(state: AgentState) -> AgentState:
@@ -241,6 +271,59 @@ async def contract_scan(state: AgentState) -> AgentState:
     return {"answer": summary, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": structured}
 
 
+async def db_query(state: AgentState) -> AgentState:
+    """Answer questions by generating and executing a SELECT query against the org's connected DB."""
+    cached = schema_cache.load(state["org_id"])
+    if not cached:
+        return {
+            "answer": (
+                "No external database is connected for your organization. "
+                "Ask your admin to connect one via Admin → Database."
+            ),
+            "used_context": False, "sources": [], "structured": None,
+        }
+
+    schema = cached["schema"]
+    conn_str = cached["connection_string"]
+    schema_text = db_connector.render_schema(schema)
+
+    sql_prompt = (
+        f"Database schema:\n{schema_text}\n\n"
+        f"Question: {state['query']}\n\n"
+        "Write a single valid SELECT SQL query to answer this question. "
+        "Output only the SQL statement, no explanation, no code fences, no trailing semicolon."
+    )
+    sql = (await generate(sql_prompt, system="You output only a valid SQL SELECT statement, nothing else.")).strip().rstrip(";")
+
+    try:
+        rows = db_connector.execute_select(conn_str, sql)
+    except Exception as exc:
+        return {
+            "answer": f"I generated a query but it failed to execute: {exc}",
+            "used_context": False, "sources": [],
+            "structured": {"sql": sql, "error": str(exc), "rows": [], "total_rows": 0},
+        }
+
+    capped = rows[:20]
+    result_text = json.dumps(capped, indent=2, default=str)
+    answer_prompt = (
+        f"{_history_block(state)}"
+        f"Question: {state['query']}\n\n"
+        f"SQL executed:\n{sql}\n\n"
+        f"Result ({len(rows)} row(s)):\n{result_text}\n\n"
+        "Answer the question in clear, friendly natural language. "
+        "If the result is empty, say so and suggest why."
+    )
+    answer = await generate(answer_prompt, system=_PERSONA + "You answer data questions conversationally and concisely.")
+
+    return {
+        "answer": answer,
+        "used_context": False,
+        "sources": [],
+        "structured": {"sql": sql, "rows": capped, "total_rows": len(rows)},
+    }
+
+
 def _find_number(item: dict, names: tuple[str, ...]) -> float:
     """Find a numeric value in an item dict by trying several key names (and a
     case-insensitive, underscore-stripped match) so totals survive LLM key drift."""
@@ -279,4 +362,5 @@ SPECIALISTS = {
     "leave_request": leave_request,
     "onboarding_gen": onboarding_gen,
     "contract_scan": contract_scan,
+    "db_query": db_query,
 }

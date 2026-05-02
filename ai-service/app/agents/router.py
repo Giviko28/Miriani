@@ -32,6 +32,9 @@ _KEYWORD_HINTS = {
                        "joining", "first day", "checklist for"),
     "contract_scan": ("contract", "vendor", "agreement", "risk", "scan contract",
                       "review contract", "check contract", "risky clause"),
+    "db_query": ("who is on leave", "who is off", "check availability", "is available",
+                 "query the database", "from the database", "from the system",
+                 "show me scheduled", "scheduled leave", "schedule conflict"),
 }
 
 
