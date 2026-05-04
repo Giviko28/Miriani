@@ -412,5 +412,4 @@ SPECIALISTS = {
     "onboarding_gen": onboarding_gen,
     "contract_scan": contract_scan,
     "db_query": db_query,
-    "db_explore": db_explore,
 }

@@ -22,6 +22,14 @@ public class OrgDbController(IOrgDbConfigService service, ICurrentUser currentUs
         return Ok(result);
     }
 
+    [HttpPost("explore")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Explore(CancellationToken ct)
+    {
+        var summary = await service.ExploreAsync(currentUser.OrgId, ct);
+        return Ok(new { summary });
+    }
+
     [HttpDelete]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Disconnect(CancellationToken ct)

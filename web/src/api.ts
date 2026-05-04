@@ -236,6 +236,7 @@ export const api = {
     save: (dbType: string, connectionString: string) =>
       request<{ connected: boolean; dbType: string | null; schemaJson: string | null; updatedAt: string | null }>(
         "/api/org-db", jsonBody({ dbType, connectionString })),
+    explore: () => request<{ summary: string }>("/api/org-db/explore", { method: "POST" }),
     disconnect: () => request<void>("/api/org-db", { method: "DELETE" }),
   },
 
