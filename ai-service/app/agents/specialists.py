@@ -271,6 +271,51 @@ async def contract_scan(state: AgentState) -> AgentState:
     return {"answer": summary, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": structured}
 
 
+async def db_explore(state: AgentState) -> AgentState:
+    """Explore every table in the connected DB, build a natural-language description, and save it."""
+    cached = schema_cache.load(state["org_id"])
+    if not cached:
+        return {
+            "answer": "No database is connected. Ask your admin to connect one via Admin → Database.",
+            "used_context": False, "sources": [], "structured": None,
+        }
+
+    conn_str = cached["connection_string"]
+    schema = cached["schema"]
+    tables = schema.get("tables", [])
+
+    # Sample up to 5 rows from each table to give the LLM concrete examples.
+    samples: list[str] = []
+    for table in tables:
+        try:
+            rows = db_connector.execute_select(conn_str, f"SELECT * FROM {table['name']} LIMIT 5")
+            rows_text = json.dumps(rows, default=str)
+        except Exception:
+            rows_text = "(could not read)"
+        col_list = ", ".join(f"{c['name']} ({c['type']})" for c in table["columns"])
+        samples.append(f"Table: {table['name']}\nColumns: {col_list}\nSample rows: {rows_text}")
+
+    sample_block = "\n\n".join(samples)
+    prompt = (
+        f"You have been given a database with the following tables and sample data:\n\n{sample_block}\n\n"
+        "Write a clear, concise description of this database — what it stores, what each table "
+        "represents, the key columns, and any notable data patterns you can see from the samples. "
+        "This description will be used as permanent context so you always know what data is available. "
+        "Write it as a single cohesive paragraph per table, no bullet lists."
+    )
+    summary = await generate(prompt, system=_PERSONA + "You write precise, factual database descriptions.")
+
+    schema_cache.save_summary(state["org_id"], summary)
+
+    table_names = ", ".join(t["name"] for t in tables)
+    return {
+        "answer": f"I've explored and memorized the database. Here's what I found:\n\n{summary}",
+        "used_context": False,
+        "sources": [],
+        "structured": {"tables_explored": table_names, "summary_saved": True},
+    }
+
+
 async def db_query(state: AgentState) -> AgentState:
     """Answer questions by generating and executing a SELECT query against the org's connected DB."""
     cached = schema_cache.load(state["org_id"])
@@ -285,9 +330,12 @@ async def db_query(state: AgentState) -> AgentState:
 
     schema = cached["schema"]
     conn_str = cached["connection_string"]
+    saved_summary = cached.get("summary", "")
     schema_text = db_connector.render_schema(schema)
 
+    context_block = f"Database description:\n{saved_summary}\n\n" if saved_summary else ""
     sql_prompt = (
+        f"{context_block}"
         f"Database schema:\n{schema_text}\n\n"
         f"Question: {state['query']}\n\n"
         "Write a single valid SELECT SQL query to answer this question. "
@@ -308,6 +356,7 @@ async def db_query(state: AgentState) -> AgentState:
     result_text = json.dumps(capped, indent=2, default=str)
     answer_prompt = (
         f"{_history_block(state)}"
+        f"{context_block}"
         f"Question: {state['query']}\n\n"
         f"SQL executed:\n{sql}\n\n"
         f"Result ({len(rows)} row(s)):\n{result_text}\n\n"
@@ -363,4 +412,5 @@ SPECIALISTS = {
     "onboarding_gen": onboarding_gen,
     "contract_scan": contract_scan,
     "db_query": db_query,
+    "db_explore": db_explore,
 }

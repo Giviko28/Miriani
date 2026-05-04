@@ -39,3 +39,17 @@ def get_connection_string(org_id: str) -> str | None:
 def get_schema(org_id: str) -> dict | None:
     data = load(org_id)
     return data["schema"] if data else None
+
+
+def save_summary(org_id: str, summary: str) -> None:
+    """Persist the AI-generated DB description so it survives restarts."""
+    data = load(org_id)
+    if data is None:
+        return
+    data["summary"] = summary
+    _path(org_id).write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def get_summary(org_id: str) -> str | None:
+    data = load(org_id)
+    return data.get("summary") if data else None

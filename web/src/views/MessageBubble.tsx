@@ -23,6 +23,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   onboarding_gen: "Onboarding Kit",
   contract_scan: "Contract Scanner",
   db_query: "Database Query",
+  db_explore: "DB Explorer",
 };
 
 type ParsedSource = { fileName: string; distance: number; text: string };
