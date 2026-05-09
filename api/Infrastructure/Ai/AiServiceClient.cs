@@ -69,7 +69,32 @@ public class AiServiceClient(HttpClient http) : IAiService
         return new AiAgentAnswer(body.Route, body.Answer, body.Used_Context, sources, body.Structured);
     }
 
+    public async Task<string> ConnectDbAsync(Guid orgId, string connectionString, CancellationToken ct = default)
+    {
+        var payload = new { org_id = orgId.ToString(), connection_string = connectionString };
+        var resp = await http.PostAsJsonAsync("/db/connect", payload, ct);
+        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadFromJsonAsync<DbSchemaBody>(ct);
+        return System.Text.Json.JsonSerializer.Serialize(body);
+    }
+
+    public async Task<string> ExploreDbAsync(Guid orgId, CancellationToken ct = default)
+    {
+        var resp = await http.PostAsync($"/db/explore/{orgId}", null, ct);
+        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadFromJsonAsync<DbExploreBody>(ct);
+        return body?.Summary ?? string.Empty;
+    }
+
+    public async Task DisconnectDbAsync(Guid orgId, CancellationToken ct = default)
+    {
+        var resp = await http.DeleteAsync($"/db/disconnect/{orgId}", ct);
+        resp.EnsureSuccessStatusCode();
+    }
+
     private record IngestBody(string Doc_Id, int Chunks);
+    private record DbSchemaBody(string Org_Id, List<object> Tables);
+    private record DbExploreBody(string Org_Id, string Summary, int Tables_Explored);
     private record QueryBody(string Answer, bool Used_Context, List<SourceBody> Sources);
     private record AgentBody(
         string Route, string Answer, bool Used_Context, List<SourceBody> Sources,
