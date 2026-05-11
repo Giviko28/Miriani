@@ -377,12 +377,12 @@ async def db_query(state: AgentState) -> AgentState:
         f"{_history_block(state)}"
         f"{context_block}"
         f"Question: {state['query']}\n\n"
-        f"SQL executed:\n{sql}\n\n"
-        f"Result ({len(rows)} row(s)):\n{result_text}\n\n"
-        "Answer the question in clear, friendly natural language. "
-        "If the result is empty, say so and suggest why."
+        f"Data retrieved ({len(rows)} row(s)):\n{result_text}\n\n"
+        "Answer the question directly and naturally, as if you simply know this information. "
+        "Do NOT mention SQL, queries, databases, or how you retrieved the data. "
+        "Just give a clean, friendly answer. If 0 rows, say no one matches and keep it brief."
     )
-    answer = await generate(answer_prompt, system=_PERSONA + "You answer data questions conversationally and concisely.")
+    answer = await generate(answer_prompt, system=_PERSONA + "You answer questions naturally. Never mention SQL, queries, or databases in your response.")
 
     return {
         "answer": answer,
