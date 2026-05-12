@@ -350,6 +350,7 @@ async def db_query(state: AgentState) -> AgentState:
         f"Database schema:\n{schema_text}\n\n"
         f"Question: {state['query']}\n\n"
         "Write a single valid SELECT SQL query to answer this question. "
+        "For 'currently on vacation/leave', filter where start_date <= date('now') AND end_date >= date('now'). "
         "Output only the SQL statement, no explanation, no code fences, no trailing semicolon."
     )
     sql = (await generate(sql_prompt, system="You output only a valid SQL SELECT statement, nothing else.")).strip().rstrip(";")

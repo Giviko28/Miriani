@@ -40,26 +40,49 @@ _KEYWORD_HINTS = {
                  "check availability", "is available", "is free", "any conflicts",
                  "query the database", "from the database", "from the system",
                  "show me scheduled", "scheduled leave", "schedule conflict",
-                 "who is taking", "who took", "list of employees on"),
+                 "who is taking", "who took", "list of employees on",
+                 "when will they", "when do they", "when are they back", "when does",
+                 "when will he", "when will she", "end date", "return date",
+                 "how long are they", "how long will they", "finish vacation",
+                 "finish leave", "back from vacation", "back from leave"),
 }
 
 
 def _heuristic(query: str) -> str | None:
+    import re
     q = query.lower()
     for key, words in _KEYWORD_HINTS.items():
-        if any(w in q for w in words):
-            return key
+        for w in words:
+            # Multi-word phrases: substring match is fine.
+            # Single words: require word boundary so "hey" doesn't fire inside "they".
+            if " " in w:
+                if w in q:
+                    return key
+            else:
+                if re.search(rf"\b{re.escape(w)}\b", q):
+                    return key
     return None
 
 
 async def route(state: AgentState) -> AgentState:
     """Decide which specialized agent handles the request."""
     query = state["query"]
+    history = state.get("history") or []
 
     # Cheap keyword pass first; fall back to the LLM for anything ambiguous.
     choice = _heuristic(query)
     if choice is None:
-        raw = (await generate(query, system=_ROUTER_SYSTEM)).strip().lower()
+        # Include the last 2 turns so the LLM can resolve follow-up questions.
+        history_block = ""
+        if history:
+            recent = history[-4:]  # up to 2 full turns (user+assistant each)
+            history_block = "Recent conversation:\n" + "\n".join(
+                f"{m['sender'].capitalize()}: {m['content']}" for m in recent
+            ) + "\n\n"
+        raw = (await generate(
+            f"{history_block}New message: {query}",
+            system=_ROUTER_SYSTEM
+        )).strip().lower()
         choice = next((k for k in AGENT_KEYS if k in raw), "policy_qa")
 
     return {"route": choice}
