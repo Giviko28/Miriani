@@ -45,4 +45,7 @@ public interface IAiService
 
     /// <summary>Remove the org's cached DB connection from the AI service.</summary>
     Task DisconnectDbAsync(Guid orgId, CancellationToken ct = default);
+
+    /// <summary>Delete all vector chunks belonging to a document from the AI service.</summary>
+    Task DeleteDocumentAsync(Guid docId, CancellationToken ct = default);
 }

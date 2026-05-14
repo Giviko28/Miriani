@@ -91,6 +91,12 @@ async def ingest(
     return IngestResponse(doc_id=result.doc_id, chunks=result.chunks)
 
 
+@app.delete("/ingest/{doc_id}", status_code=204)
+async def delete_document(doc_id: str) -> None:
+    from app.rag.store import vector_store
+    vector_store.delete_document(doc_id)
+
+
 class QueryRequest(BaseModel):
     org_id: str
     role_level: int = 0
