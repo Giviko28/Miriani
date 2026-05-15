@@ -138,7 +138,7 @@ async def invoice_gen(state: AgentState) -> AgentState:
         "currency (string), notes (string). Compute nothing; just extract. "
         f"If a field is missing, use null or an empty array.\n\nRequest:\n{state['query']}"
     )
-    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.")
+    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.", temperature=0.1, json_mode=True)
 
     structured = _parse_json(raw)
     if structured is None:
@@ -203,7 +203,7 @@ async def leave_request(state: AgentState) -> AgentState:
         "formal_letter (string — a short formal leave request letter the employee can send). "
         "If no policy is available, set status to pending and note that HR review is needed."
     )
-    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.")
+    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.", temperature=0.1, json_mode=True)
     structured = _parse_json(raw)
     if structured is None:
         return {"answer": raw, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
@@ -231,7 +231,7 @@ async def onboarding_gen(state: AgentState) -> AgentState:
         "month_1 (array of strings — tasks for the first month). "
         "Base tasks on the company policies where available. Aim for 4-6 items per phase."
     )
-    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.")
+    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.", temperature=0.1, json_mode=True)
     structured = _parse_json(raw)
     if structured is None:
         return {"answer": raw, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
@@ -260,7 +260,7 @@ async def contract_scan(state: AgentState) -> AgentState:
         "recommendations (array of strings — concrete next steps). "
         "If no contract content is found, set overall_risk to Medium and note that a document should be uploaded."
     )
-    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.")
+    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.", temperature=0.1, json_mode=True)
     structured = _parse_json(raw)
     if structured is None:
         return {"answer": raw, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
@@ -362,7 +362,7 @@ async def db_query(state: AgentState) -> AgentState:
         "For month/period questions do NOT add a current-date range filter. "
         "Output only the SQL, no explanation, no code fences, no trailing semicolon."
     )
-    sql = (await generate(sql_prompt, system="You output only a valid SQL SELECT statement, nothing else.")).strip().rstrip(";")
+    sql = (await generate(sql_prompt, system="You output only a valid SQL SELECT statement, nothing else.", temperature=0.0)).strip().rstrip(";")
 
     # Auto-correct common cross-dialect function mistakes before executing.
     if conn_str.startswith("sqlite"):
@@ -398,7 +398,7 @@ async def db_query(state: AgentState) -> AgentState:
         "Do NOT mention SQL, queries, databases, or how you retrieved the data. "
         "Just give a clean, friendly answer. If 0 rows, say no one matches and keep it brief."
     )
-    answer = await generate(answer_prompt, system=_PERSONA + "You answer questions naturally. Never mention SQL, queries, or databases in your response.")
+    answer = await generate(answer_prompt, system=_PERSONA + "You answer questions naturally. Never mention SQL, queries, or databases in your response.", temperature=0.3)
 
     return {
         "answer": answer,
