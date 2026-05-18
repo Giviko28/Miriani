@@ -82,13 +82,17 @@ class VectorStore:
 
         chunks: list[RetrievedChunk] = []
         for text_i, meta_i, dist_i in zip(docs[0], metas[0], dists[0]):
+            distance = float(dist_i)
+            # Drop clearly-irrelevant matches so we don't ground answers on noise.
+            if distance > settings.retrieval_max_distance:
+                continue
             chunks.append(
                 RetrievedChunk(
                     text=text_i,
                     doc_id=str(meta_i.get("doc_id", "")),
                     file_name=str(meta_i.get("file_name", "")),
                     chunk_index=int(meta_i.get("chunk_index", 0)),
-                    distance=float(dist_i),
+                    distance=distance,
                 )
             )
         return chunks
