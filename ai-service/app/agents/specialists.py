@@ -363,29 +363,32 @@ async def db_query(state: AgentState) -> AgentState:
         "Output only the SQL, no explanation, no code fences, no trailing semicolon."
     )
     sql = (await generate(sql_prompt, system="You output only a valid SQL SELECT statement, nothing else.", temperature=0.0)).strip().rstrip(";")
-
-    # Auto-correct common cross-dialect function mistakes before executing.
-    if conn_str.startswith("sqlite"):
-        import re as _re
-        sql = _re.sub(r'\bCURDATE\(\)', "date('now')", sql, flags=_re.IGNORECASE)
-        sql = _re.sub(r'\bNOW\(\)', "datetime('now')", sql, flags=_re.IGNORECASE)
-        sql = _re.sub(r'\bGETDATE\(\)', "datetime('now')", sql, flags=_re.IGNORECASE)
-        sql = _re.sub(r'\bCURRENT_TIMESTAMP\b', "datetime('now')", sql, flags=_re.IGNORECASE)
-        # MONTH(col) → CAST(strftime('%m', col) AS INTEGER)
-        sql = _re.sub(r'\bMONTH\(([^)]+)\)', lambda m: f"CAST(strftime('%m', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
-        # YEAR(col) → CAST(strftime('%Y', col) AS INTEGER)
-        sql = _re.sub(r'\bYEAR\(([^)]+)\)', lambda m: f"CAST(strftime('%Y', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
-        # DAY(col) → CAST(strftime('%d', col) AS INTEGER)
-        sql = _re.sub(r'\bDAY\(([^)]+)\)', lambda m: f"CAST(strftime('%d', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
+    sql = _autocorrect_sql(sql, conn_str)
 
     try:
         rows = db_connector.execute_select(conn_str, sql)
     except Exception as exc:
-        return {
-            "answer": f"I couldn't retrieve that information from the database. The query failed: {exc}",
-            "used_context": False, "sources": [],
-            "structured": {"sql": sql, "error": str(exc), "rows": [], "total_rows": 0},
-        }
+        # Self-correction: feed the error back once so the model can repair the query,
+        # the same way a stronger reasoner would recover from a failed attempt.
+        repair_prompt = (
+            f"{dialect_hint}\n{sqlite_examples}"
+            f"Database schema:\n{schema_text}\n\n"
+            f"Question: {state['query']}\n\n"
+            f"This SQL failed:\n{sql}\n\nError: {exc}\n\n"
+            "Write a corrected single valid SELECT query that fixes the error. "
+            "Output only the SQL, no explanation, no code fences, no trailing semicolon."
+        )
+        repaired = (await generate(repair_prompt, system="You output only a valid SQL SELECT statement, nothing else.", temperature=0.0)).strip().rstrip(";")
+        repaired = _autocorrect_sql(repaired, conn_str)
+        try:
+            rows = db_connector.execute_select(conn_str, repaired)
+            sql = repaired
+        except Exception as exc2:
+            return {
+                "answer": f"I couldn't retrieve that information from the database. The query failed: {exc2}",
+                "used_context": False, "sources": [],
+                "structured": {"sql": repaired, "error": str(exc2), "rows": [], "total_rows": 0},
+            }
 
     capped = rows[:20]
     result_text = json.dumps(capped, indent=2, default=str)
@@ -406,6 +409,24 @@ async def db_query(state: AgentState) -> AgentState:
         "sources": [],
         "structured": {"sql": sql, "rows": capped, "total_rows": len(rows)},
     }
+
+
+def _autocorrect_sql(sql: str, conn_str: str) -> str:
+    """Fix common cross-dialect function mistakes the model makes for SQLite."""
+    if not conn_str.startswith("sqlite"):
+        return sql
+    import re as _re
+    sql = _re.sub(r'\bCURDATE\(\)', "date('now')", sql, flags=_re.IGNORECASE)
+    sql = _re.sub(r'\bNOW\(\)', "datetime('now')", sql, flags=_re.IGNORECASE)
+    sql = _re.sub(r'\bGETDATE\(\)', "datetime('now')", sql, flags=_re.IGNORECASE)
+    sql = _re.sub(r'\bCURRENT_TIMESTAMP\b', "datetime('now')", sql, flags=_re.IGNORECASE)
+    # MONTH(col) → CAST(strftime('%m', col) AS INTEGER)
+    sql = _re.sub(r'\bMONTH\(([^)]+)\)', lambda m: f"CAST(strftime('%m', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
+    # YEAR(col) → CAST(strftime('%Y', col) AS INTEGER)
+    sql = _re.sub(r'\bYEAR\(([^)]+)\)', lambda m: f"CAST(strftime('%Y', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
+    # DAY(col) → CAST(strftime('%d', col) AS INTEGER)
+    sql = _re.sub(r'\bDAY\(([^)]+)\)', lambda m: f"CAST(strftime('%d', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
+    return sql
 
 
 def _find_number(item: dict, names: tuple[str, ...]) -> float:
