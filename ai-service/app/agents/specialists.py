@@ -68,6 +68,7 @@ async def greeting(state: AgentState) -> AgentState:
             "You are having a casual, friendly conversation. "
             "Always introduce yourself by name (Miriani) early in your reply."
         ),
+        temperature=0.7,
     )
     return {"answer": reply, "used_context": False, "sources": [], "structured": None}
 
@@ -112,7 +113,7 @@ async def email_draft(state: AgentState) -> AgentState:
         f"Write a professional business email for this request:\n{state['query']}\n\n"
         "Include a subject line. Keep it concise and courteous."
     )
-    reply = await generate(prompt, system=_PERSONA + "You draft clear, professional business emails.")
+    reply = await generate(prompt, system=_PERSONA + "You draft clear, professional business emails.", temperature=0.6)
     return {"answer": reply, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
 
 
@@ -126,7 +127,7 @@ async def report_draft(state: AgentState) -> AgentState:
         f"Write a structured business report for this request:\n{state['query']}\n\n"
         "Use clear headings (Summary, Details, Recommendations)."
     )
-    reply = await generate(prompt, system=_PERSONA + "You write structured, factual business reports.")
+    reply = await generate(prompt, system=_PERSONA + "You write structured, factual business reports.", temperature=0.45)
     return {"answer": reply, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
 
 
