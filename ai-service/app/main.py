@@ -97,6 +97,29 @@ async def delete_document(doc_id: str) -> None:
     vector_store.delete_document(doc_id)
 
 
+class ReconcileRequest(BaseModel):
+    org_id: str
+    valid_doc_ids: list[str]
+
+
+class ReconcileResponse(BaseModel):
+    removed: list[str]
+
+
+@app.get("/ingest/docs/{org_id}")
+async def list_org_docs(org_id: str) -> dict:
+    """List the distinct doc_ids currently held in the vector store for an org."""
+    return {"org_id": org_id, "doc_ids": sorted(vector_store.list_doc_ids(org_id))}
+
+
+@app.post("/ingest/reconcile")
+async def reconcile_org_docs(req: ReconcileRequest) -> ReconcileResponse:
+    """Purge orphaned vectors: delete any of the org's chunks whose doc_id is not in
+    the authoritative list supplied by the system of record (the .NET Documents table)."""
+    removed = vector_store.reconcile(req.org_id, set(req.valid_doc_ids))
+    return ReconcileResponse(removed=removed)
+
+
 class QueryRequest(BaseModel):
     org_id: str
     role_level: int = 0
