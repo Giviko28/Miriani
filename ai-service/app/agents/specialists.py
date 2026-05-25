@@ -334,6 +334,18 @@ async def db_query(state: AgentState) -> AgentState:
     saved_summary = cached.get("summary", "")
     schema_text = db_connector.render_schema(schema)
 
+    # The model's training cutoff makes it assume an older "current" year (e.g. 2023),
+    # so it would filter on the wrong year for "this year"/relative-date questions.
+    # Anchor it to the real system date.
+    from datetime import date
+    _today = date.today()
+    date_hint = (
+        f"IMPORTANT: Today's date is {_today.isoformat()} (the current year is {_today.year}). "
+        f"Do NOT assume any other year. For relative dates like 'this year', 'next month', "
+        f"or 'currently', reason from {_today.isoformat()} and prefer the database's own "
+        f"current-date function over hard-coding a year.\n"
+    )
+
     # Tell the LLM which dialect to use so it picks the right date functions.
     if conn_str.startswith("sqlite"):
         dialect_hint = "Database type: SQLite. Use date('now') for today, NOT CURDATE() or NOW(). Use strftime() for date formatting."
@@ -355,6 +367,7 @@ async def db_query(state: AgentState) -> AgentState:
     ) if conn_str.startswith("sqlite") else ""
     sql_prompt = (
         f"{context_block}"
+        f"{date_hint}"
         f"{dialect_hint}\n"
         f"{sqlite_examples}"
         f"Database schema:\n{schema_text}\n\n"
@@ -372,6 +385,7 @@ async def db_query(state: AgentState) -> AgentState:
         # Self-correction: feed the error back once so the model can repair the query,
         # the same way a stronger reasoner would recover from a failed attempt.
         repair_prompt = (
+            f"{date_hint}"
             f"{dialect_hint}\n{sqlite_examples}"
             f"Database schema:\n{schema_text}\n\n"
             f"Question: {state['query']}\n\n"
@@ -396,6 +410,7 @@ async def db_query(state: AgentState) -> AgentState:
     answer_prompt = (
         f"{_history_block(state)}"
         f"{context_block}"
+        f"(For reference, today's date is {_today.isoformat()}.)\n"
         f"Question: {state['query']}\n\n"
         f"Data retrieved ({len(rows)} row(s)):\n{result_text}\n\n"
         "Answer the question directly and naturally, as if you simply know this information. "
