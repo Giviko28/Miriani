@@ -472,6 +472,34 @@ def _parse_json(raw: str) -> dict | None:
         return None
 
 
+async def ticket_triage(state: AgentState) -> AgentState:
+    """Triage an IT/support request into a structured ticket ready to file in Jira."""
+    sources = _retrieve(state)
+    context = "\n\n".join(s.text for s in sources)
+    context_block = f"Relevant internal knowledge (use to suggest a resolution):\n{context}\n\n" if context else ""
+    prompt = (
+        f"{_history_block(state)}{context_block}"
+        f"Support/IT request: {state['query']}\n\n"
+        "Triage this into a support ticket. "
+        "Return ONLY a JSON object with keys: "
+        "summary (string — a short one-line ticket title), "
+        "description (string — a clear restatement of the problem with any troubleshooting steps to try), "
+        "priority (one of: Low, Medium, High, Critical — infer urgency from the wording), "
+        "issue_type (one of: Bug, Task, Incident, Service Request), "
+        "category (string — e.g. Network, Hardware, Access, Software, Other)."
+    )
+    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.", temperature=0.1, json_mode=True)
+    structured = _parse_json(raw)
+    if structured is None:
+        return {"answer": raw, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
+    summary = (
+        f"Ticket ready: \"{structured.get('summary', 'Support request')}\" "
+        f"[{structured.get('priority', 'Medium')} · {structured.get('issue_type', 'Task')}]. "
+        "Review the details and create it in Jira."
+    )
+    return {"answer": summary, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": structured}
+
+
 # Map agent keys to their node functions (consumed by the graph builder).
 SPECIALISTS = {
     "greeting": greeting,
@@ -484,4 +512,5 @@ SPECIALISTS = {
     "onboarding_gen": onboarding_gen,
     "contract_scan": contract_scan,
     "db_query": db_query,
+    "ticket_triage": ticket_triage,
 }

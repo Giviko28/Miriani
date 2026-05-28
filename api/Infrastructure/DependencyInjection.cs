@@ -2,15 +2,23 @@ using Application.Ai;
 using Application.Auth;
 using Application.Common;
 using Application.Documents;
+using Application.Email;
 using Application.Faqs;
+using Application.Jira;
 using Application.OrgDb;
+using Application.Processes;
 using Application.Users;
 using Infrastructure.Ai;
 using Infrastructure.Audit;
 using Infrastructure.Auth;
+using Infrastructure.Calendar;
 using Infrastructure.Documents;
+using Infrastructure.Email;
 using Infrastructure.Faqs;
+using Infrastructure.Jira;
+using Infrastructure.Notifications;
 using Infrastructure.OrgDb;
+using Infrastructure.Pdf;
 using Infrastructure.Persistence;
 using Infrastructure.Storage;
 using Infrastructure.Users;
@@ -49,6 +57,18 @@ public static class DependencyInjection
             client.BaseAddress = new Uri(aiBaseUrl);
             client.Timeout = TimeSpan.FromSeconds(180); // ingestion embeds every chunk
         });
+
+        // --- business-process integrations ---
+        services.Configure<SmtpOptions>(config.GetSection(SmtpOptions.SectionName));
+        services.Configure<JiraOptions>(config.GetSection(JiraOptions.SectionName));
+        services.Configure<NotificationOptions>(config.GetSection(NotificationOptions.SectionName));
+        services.Configure<ProcessOptions>(config.GetSection(ProcessOptions.SectionName));
+
+        services.AddScoped<IEmailService, SmtpEmailService>();
+        services.AddSingleton<IPdfService, PdfService>();
+        services.AddSingleton<ICalendarService, IcsCalendarService>();
+        services.AddHttpClient<IJiraService, JiraClient>();
+        services.AddHttpClient<INotificationService, WebhookNotificationService>();
 
         return services;
     }
