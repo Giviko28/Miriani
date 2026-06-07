@@ -91,27 +91,47 @@ public class JiraClient(HttpClient http, IOptions<JiraOptions> options) : IJiraS
             return new JiraCreatedIssue($"{_opt.ProjectKey}-{1000 + n}", "#", Simulated: true);
         }
 
-        var url = $"{Root()}/rest/api/3/issue";
+        var requested = string.IsNullOrWhiteSpace(issue.IssueType) ? "Task" : issue.IssueType;
+
+        // Try the requested issue type; if the project doesn't define it (e.g. "Incident" or
+        // "Service Request" on a default Kanban project), fall back to "Task" so the demo
+        // doesn't break on a configuration mismatch.
+        var (resp, body) = await PostIssueAsync(requested, issue, ct);
+        if (!resp.IsSuccessStatusCode && !requested.Equals("Task", StringComparison.OrdinalIgnoreCase))
+        {
+            resp.Dispose();
+            (resp, body) = await PostIssueAsync("Task", issue, ct);
+        }
+
+        using (resp)
+        {
+            if (!resp.IsSuccessStatusCode)
+                throw new HttpRequestException($"Jira create failed ({(int)resp.StatusCode}): {body}");
+
+            using var doc = JsonDocument.Parse(body);
+            var key = doc.RootElement.GetProperty("key").GetString() ?? "";
+            return new JiraCreatedIssue(key, $"{Root()}/browse/{key}", Simulated: false);
+        }
+    }
+
+    private async Task<(HttpResponseMessage Resp, string Body)> PostIssueAsync(
+        string issueType, JiraNewIssue issue, CancellationToken ct)
+    {
         var payload = new
         {
             fields = new Dictionary<string, object?>
             {
                 ["project"] = new { key = _opt.ProjectKey },
                 ["summary"] = issue.Summary,
-                ["issuetype"] = new { name = string.IsNullOrWhiteSpace(issue.IssueType) ? "Task" : issue.IssueType },
+                ["issuetype"] = new { name = issueType },
                 ["description"] = JiraText.ToAdf(issue.Description),
             },
         };
-
-        var req = Authorized(HttpMethod.Post, url);
+        var req = Authorized(HttpMethod.Post, $"{Root()}/rest/api/3/issue");
         req.Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-        using var resp = await http.SendAsync(req, ct);
-        resp.EnsureSuccessStatusCode();
-
-        await using var stream = await resp.Content.ReadAsStreamAsync(ct);
-        using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
-        var key = doc.RootElement.GetProperty("key").GetString() ?? "";
-        return new JiraCreatedIssue(key, $"{Root()}/browse/{key}", Simulated: false);
+        var resp = await http.SendAsync(req, ct);
+        var body = await resp.Content.ReadAsStringAsync(ct);
+        return (resp, body);
     }
 
     // --- helpers ---
