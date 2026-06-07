@@ -81,7 +81,9 @@ public class ChatService(AppDbContext db, IAiService ai) : IChatService
             Content = query,
         });
 
-        var answer = await ai.RunAgentAsync(orgId, role, query, turns, ct);
+        var answer = await ai.RunAgentAsync(
+            orgId, role, query, turns,
+            attachmentText: req.AttachmentText, attachmentName: req.AttachmentName, ct: ct);
 
         var sourcesJson = answer.Sources.Count > 0 ? JsonSerializer.Serialize(answer.Sources) : null;
         var structuredJson = answer.Structured is not null ? JsonSerializer.Serialize(answer.Structured) : null;

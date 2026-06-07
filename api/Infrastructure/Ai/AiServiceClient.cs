@@ -48,7 +48,9 @@ public class AiServiceClient(HttpClient http) : IAiService
 
     public async Task<AiAgentAnswer> RunAgentAsync(
         Guid orgId, UserRole role, string query,
-        IReadOnlyList<AiTurn>? history = null, CancellationToken ct = default)
+        IReadOnlyList<AiTurn>? history = null,
+        string? attachmentText = null, string? attachmentName = null,
+        CancellationToken ct = default)
     {
         var payload = new
         {
@@ -56,6 +58,8 @@ public class AiServiceClient(HttpClient http) : IAiService
             role_level = (int)role,
             query,
             history = history?.Select(t => new { sender = t.Sender, content = t.Content }).ToList(),
+            attachment_text = string.IsNullOrWhiteSpace(attachmentText) ? null : attachmentText,
+            attachment_name = string.IsNullOrWhiteSpace(attachmentName) ? null : attachmentName,
         };
 
         var resp = await http.PostAsJsonAsync("/agent/run", payload, ct);
@@ -67,6 +71,18 @@ public class AiServiceClient(HttpClient http) : IAiService
             .Select(s => new AiSource(s.Doc_Id, s.File_Name, s.Chunk_Index, s.Distance, s.Text))
             .ToList();
         return new AiAgentAnswer(body.Route, body.Answer, body.Used_Context, sources, body.Structured);
+    }
+
+    public async Task<AiExtractResult> ExtractAttachmentAsync(string fileName, byte[] data, CancellationToken ct = default)
+    {
+        using var form = new MultipartFormDataContent();
+        form.Add(new ByteArrayContent(data), "file", fileName);
+
+        var resp = await http.PostAsync("/extract", form, ct);
+        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadFromJsonAsync<ExtractBody>(ct)
+                   ?? new ExtractBody(fileName, "", 0, false);
+        return new AiExtractResult(body.File_Name, body.Text, body.Chars, body.Truncated);
     }
 
     public async Task<string> ConnectDbAsync(Guid orgId, string connectionString, CancellationToken ct = default)
@@ -114,6 +130,7 @@ public class AiServiceClient(HttpClient http) : IAiService
 
     private record ReconcileBody(List<string> Removed);
     private record IngestBody(string Doc_Id, int Chunks);
+    private record ExtractBody(string File_Name, string Text, int Chars, bool Truncated);
     private record DbSchemaBody(string Org_Id, List<object> Tables);
     private record DbExploreBody(string Org_Id, string Summary, int Tables_Explored);
     private record QueryBody(string Answer, bool Used_Context, List<SourceBody> Sources);

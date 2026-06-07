@@ -7,6 +7,9 @@ public record AiSource(string DocId, string FileName, int ChunkIndex, double Dis
 /// <summary>One prior conversation turn supplied as context for a follow-up request.</summary>
 public record AiTurn(string Sender, string Content);
 
+/// <summary>Result of extracting text from a temporary chat attachment.</summary>
+public record AiExtractResult(string FileName, string Text, int Chars, bool Truncated);
+
 public record AiAnswer(string Answer, bool UsedContext, IReadOnlyList<AiSource> Sources);
 
 /// <summary>Result of the agent graph: which agent handled it, plus optional structured output.</summary>
@@ -31,11 +34,21 @@ public interface IAiService
 
     /// <summary>
     /// Route the request through the agent graph to a specialized agent. Optional prior turns
-    /// give the agent conversational memory for follow-up questions.
+    /// give the agent conversational memory for follow-up questions. An optional ephemeral
+    /// attachment (extracted text for this message only) is passed as one-shot context and is
+    /// never stored or embedded.
     /// </summary>
     Task<AiAgentAnswer> RunAgentAsync(
         Guid orgId, UserRole role, string query,
-        IReadOnlyList<AiTurn>? history = null, CancellationToken ct = default);
+        IReadOnlyList<AiTurn>? history = null,
+        string? attachmentText = null, string? attachmentName = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Extract plain text from an uploaded file WITHOUT storing it (for temporary chat
+    /// attachments). Returns the extracted text; nothing is embedded or persisted.
+    /// </summary>
+    Task<AiExtractResult> ExtractAttachmentAsync(string fileName, byte[] data, CancellationToken ct = default);
 
     /// <summary>Connect the org's external DB: introspect schema and cache it in the AI service.</summary>
     Task<string> ConnectDbAsync(Guid orgId, string connectionString, CancellationToken ct = default);

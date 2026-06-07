@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type ChatMessage, type ChatSessionSummary } from "../api";
+import { api, type ChatAttachment, type ChatMessage, type ChatSessionSummary } from "../api";
 import { Button } from "../ui";
 import { MessageBubble } from "./MessageBubble";
 
@@ -14,7 +14,25 @@ export function ChatWorkspace() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<ChatAttachment | null>(null);
+  const [attaching, setAttaching] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  async function onPickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file
+    if (!file) return;
+    setAttaching(true);
+    setError(null);
+    try {
+      setAttachment(await api.chat.extractAttachment(file));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't read that file");
+    } finally {
+      setAttaching(false);
+    }
+  }
 
   async function refreshSessions() {
     try {
@@ -52,20 +70,24 @@ export function ChatWorkspace() {
 
   async function send(text: string) {
     const query = text.trim();
-    if (!query || busy) return;
+    if ((!query && !attachment) || busy) return;
+    const sentAttachment = attachment;
     setBusy(true);
     setError(null);
     setInput("");
+    setAttachment(null);
 
     const optimistic: ChatMessage = {
-      id: nextTempId(), sender: "user", content: query,
+      id: nextTempId(),
+      sender: "user",
+      content: sentAttachment ? `${query}\n\n📎 ${sentAttachment.fileName}` : query,
       route: null, usedContext: false, sources: null, structured: null,
       createdAt: new Date().toISOString(),
     };
     setMessages((m) => [...m, optimistic]);
 
     try {
-      const r = await api.chat.sendMessage(activeId, query);
+      const r = await api.chat.sendMessage(activeId, query || `(see attached ${sentAttachment?.fileName})`, sentAttachment);
       const reply: ChatMessage = {
         id: nextTempId(), sender: "assistant", content: r.answer,
         route: r.route, usedContext: r.usedContext, sources: r.sources, structured: r.structured,
@@ -159,18 +181,42 @@ export function ChatWorkspace() {
 
         {error && <p className="px-4 text-sm text-red-600">{error}</p>}
 
-        <div className="flex gap-2 border-t border-slate-200 p-3">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); }
-            }}
-            rows={1}
-            placeholder="Message the assistant…  (Enter to send, Shift+Enter for newline)"
-            className="flex-1 resize-none rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
-          />
-          <Button onClick={() => send(input)} disabled={busy || !input.trim()}>Send</Button>
+        <div className="border-t border-slate-200 p-3">
+          {(attachment || attaching) && (
+            <div className="mb-2 flex items-center gap-2">
+              <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs text-blue-700">
+                📎 {attaching ? "Reading file…" : attachment!.fileName}
+                {attachment?.truncated && <span className="text-blue-400">(truncated)</span>}
+                {attachment && (
+                  <button onClick={() => setAttachment(null)} className="text-blue-400 hover:text-red-600" title="Remove attachment">×</button>
+                )}
+              </span>
+              <span className="text-xs text-slate-400">temporary — used for this message only, not saved</span>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <input ref={fileRef} type="file" className="hidden"
+              accept=".pdf,.docx,.xlsx,.txt,.md,.csv" onChange={onPickFile} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={busy || attaching}
+              title="Attach a file (temporary)"
+              className="rounded-md border border-slate-300 px-3 text-slate-500 hover:bg-slate-50 disabled:opacity-50"
+            >
+              📎
+            </button>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(input); }
+              }}
+              rows={1}
+              placeholder="Message the assistant…  (Enter to send, Shift+Enter for newline)"
+              className="flex-1 resize-none rounded-md border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+            />
+            <Button onClick={() => send(input)} disabled={busy || (!input.trim() && !attachment)}>Send</Button>
+          </div>
         </div>
       </div>
     </div>

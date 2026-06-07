@@ -20,11 +20,14 @@ public class ChatServiceTests
         public Task<AiAnswer> QueryAsync(Guid orgId, UserRole role, string query, CancellationToken ct = default)
             => Task.FromResult(new AiAnswer("a", true, []));
 
-        public Task<AiAgentAnswer> RunAgentAsync(Guid orgId, UserRole role, string query, IReadOnlyList<AiTurn>? history = null, CancellationToken ct = default)
+        public Task<AiAgentAnswer> RunAgentAsync(Guid orgId, UserRole role, string query, IReadOnlyList<AiTurn>? history = null, string? attachmentText = null, string? attachmentName = null, CancellationToken ct = default)
         {
             LastHistory = history;
             return Task.FromResult(new AiAgentAnswer("policy_qa", "Grounded reply.", true, [], null));
         }
+
+        public Task<AiExtractResult> ExtractAttachmentAsync(string fileName, byte[] data, CancellationToken ct = default)
+            => Task.FromResult(new AiExtractResult(fileName, "", 0, false));
 
         public Task<string> ConnectDbAsync(Guid orgId, string connectionString, CancellationToken ct = default)
             => Task.FromResult("{}");
