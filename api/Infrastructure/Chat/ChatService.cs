@@ -44,7 +44,7 @@ public class ChatService(AppDbContext db, IAiService ai) : IChatService
     }
 
     public async Task<SendMessageResult> SendAsync(
-        Guid orgId, Guid userId, UserRole role, SendMessageRequest req, CancellationToken ct = default)
+        Guid orgId, Guid userId, UserRole role, string displayName, SendMessageRequest req, CancellationToken ct = default)
     {
         var query = req.Query.Trim();
 
@@ -83,7 +83,8 @@ public class ChatService(AppDbContext db, IAiService ai) : IChatService
 
         var answer = await ai.RunAgentAsync(
             orgId, role, query, turns,
-            attachmentText: req.AttachmentText, attachmentName: req.AttachmentName, ct: ct);
+            attachmentText: req.AttachmentText, attachmentName: req.AttachmentName,
+            userName: displayName, ct: ct);
 
         var sourcesJson = answer.Sources.Count > 0 ? JsonSerializer.Serialize(answer.Sources) : null;
         var structuredJson = answer.Structured is not null ? JsonSerializer.Serialize(answer.Structured) : null;

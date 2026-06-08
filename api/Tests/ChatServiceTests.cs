@@ -20,7 +20,7 @@ public class ChatServiceTests
         public Task<AiAnswer> QueryAsync(Guid orgId, UserRole role, string query, CancellationToken ct = default)
             => Task.FromResult(new AiAnswer("a", true, []));
 
-        public Task<AiAgentAnswer> RunAgentAsync(Guid orgId, UserRole role, string query, IReadOnlyList<AiTurn>? history = null, string? attachmentText = null, string? attachmentName = null, CancellationToken ct = default)
+        public Task<AiAgentAnswer> RunAgentAsync(Guid orgId, UserRole role, string query, IReadOnlyList<AiTurn>? history = null, string? attachmentText = null, string? attachmentName = null, string? userName = null, CancellationToken ct = default)
         {
             LastHistory = history;
             return Task.FromResult(new AiAgentAnswer("policy_qa", "Grounded reply.", true, [], null));
@@ -28,6 +28,11 @@ public class ChatServiceTests
 
         public Task<AiExtractResult> ExtractAttachmentAsync(string fileName, byte[] data, CancellationToken ct = default)
             => Task.FromResult(new AiExtractResult(fileName, "", 0, false));
+
+        public Task<IReadOnlyDictionary<string, object>?> DraftJiraActionAsync(
+            Guid orgId, UserRole role, string action, AiJiraTicket ticket,
+            string? managerName = null, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyDictionary<string, object>?>(null);
 
         public Task<string> ConnectDbAsync(Guid orgId, string connectionString, CancellationToken ct = default)
             => Task.FromResult("{}");
@@ -58,7 +63,7 @@ public class ChatServiceTests
         var orgId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
-        var result = await svc.SendAsync(orgId, userId, UserRole.Employee,
+        var result = await svc.SendAsync(orgId, userId, UserRole.Employee, "Test User",
             new SendMessageRequest(null, "What is the remote work policy?"));
 
         Assert.Equal("What is the remote work policy?", result.Title);
@@ -75,9 +80,9 @@ public class ChatServiceTests
         var orgId = Guid.NewGuid();
         var userId = Guid.NewGuid();
 
-        var first = await svc.SendAsync(orgId, userId, UserRole.Employee,
+        var first = await svc.SendAsync(orgId, userId, UserRole.Employee, "Test User",
             new SendMessageRequest(null, "What is the remote work policy?"));
-        await svc.SendAsync(orgId, userId, UserRole.Employee,
+        await svc.SendAsync(orgId, userId, UserRole.Employee, "Test User",
             new SendMessageRequest(first.SessionId, "What about for managers?"));
 
         Assert.NotNull(ai.LastHistory);
@@ -96,7 +101,7 @@ public class ChatServiceTests
         var owner = Guid.NewGuid();
         var other = Guid.NewGuid();
 
-        var created = await svc.SendAsync(orgId, owner, UserRole.Employee,
+        var created = await svc.SendAsync(orgId, owner, UserRole.Employee, "Owner",
             new SendMessageRequest(null, "hello"));
 
         Assert.NotNull(await svc.GetThreadAsync(orgId, owner, created.SessionId));
@@ -111,7 +116,7 @@ public class ChatServiceTests
         var orgId = Guid.NewGuid();
         var owner = Guid.NewGuid();
         var other = Guid.NewGuid();
-        var created = await svc.SendAsync(orgId, owner, UserRole.Employee,
+        var created = await svc.SendAsync(orgId, owner, UserRole.Employee, "Owner",
             new SendMessageRequest(null, "hello"));
 
         Assert.False(await svc.DeleteAsync(orgId, other, created.SessionId)); // not the owner

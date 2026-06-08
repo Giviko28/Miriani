@@ -1,0 +1,151 @@
+SILKNET LLC — EMPLOYEE HANDBOOK
+Version 4.2 | Effective: 1 January 2025
+Confidential — For Internal Use Only
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. ABOUT SILKNET
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Silknet LLC is Georgia's leading telecommunications and internet service provider,
+headquartered at 18 Tsereteli Avenue, Tbilisi 0112. We operate nationwide fiber,
+mobile (4G/5G), and enterprise networking services for over 1.2 million subscribers.
+Our workforce of approximately 3,400 employees is spread across Tbilisi (head office),
+Kutaisi, Batumi, Rustavi, and regional technical hubs.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. WORKING HOURS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Standard office hours are Monday through Friday, 09:00–18:00 (Tbilisi Time).
+A one-hour unpaid lunch break is taken between 13:00 and 14:00.
+
+Flexible start: Head-office employees in non-customer-facing roles may start between
+08:00 and 10:00, provided they complete 8 working hours. Flexible start must be agreed
+in writing with the direct manager.
+
+Field technicians and call-centre staff follow shift schedules assigned by their
+department head. Shift rosters are published at least two weeks in advance.
+
+Overtime must be pre-approved in writing by the department head. Compensatory time off
+is granted at a 1.5× rate for weekday overtime and 2× for weekend/public-holiday work.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. REMOTE WORK (HYBRID) POLICY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Eligibility: Employees who have completed their 3-month probation period and whose role
+is classified as "desk-eligible" by HR may apply for hybrid working.
+
+Entitlement: Eligible employees may work remotely up to two (2) days per week.
+Remote days must be agreed with the line manager at the start of each week.
+
+Mandatory in-office days: Tuesday and Thursday are company-wide anchor days — all
+desk-eligible employees are expected to be in the office on these days unless on
+approved leave or business travel.
+
+Equipment: Silknet provides each hybrid employee with a laptop, VPN token, and mobile
+data SIM (up to 20 GB/month on the Silknet Business plan at no cost). Employees are
+responsible for a safe and ergonomic home workspace.
+
+Connectivity: Employees must maintain a stable internet connection (minimum 10 Mbps
+upload) during remote hours. Silknet's corporate VPN must be active for all internal
+system access.
+
+Performance: Remote employees are held to the same KPIs and availability standards as
+in-office staff. Cameras must be on during team meetings unless prior agreement is
+reached with the meeting organiser.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. ANNUAL LEAVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Entitlement: Every permanent employee accrues 24 working days of paid annual leave per
+calendar year (per Georgian Labour Code, minimum is 20; Silknet provides 4 additional
+days as a company benefit).
+
+Accrual: Leave accrues at 2 days per month from the date of hire. New employees may
+take accrued leave after completing 6 months of service.
+
+Carry-over: Up to 5 unused leave days may be carried over to the following calendar
+year. Any balance beyond 5 days is forfeited on 31 December unless HR approval is
+obtained due to operational necessity.
+
+Request process: Leave requests must be submitted through the Miriani HR portal at
+least 5 working days in advance for periods of 1–5 days, and at least 15 working days
+in advance for periods exceeding 5 days. The direct manager approves or rejects
+requests within 2 working days.
+
+Public holidays: Georgia's 16 public holidays are non-working days in addition to
+annual leave. See the official list published by the Government of Georgia each year.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. SICK LEAVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Employees are entitled to up to 15 calendar days of paid sick leave per year.
+A medical certificate from a licensed physician is required for absences exceeding
+2 consecutive working days. The certificate must be submitted to HR within 3 working
+days of return.
+
+For long-term illness exceeding 15 days, the employee transitions to the Georgian
+Social Service Agency disability/sick-pay scheme; HR will assist with documentation.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. MATERNITY & PATERNITY LEAVE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Maternity leave: 183 calendar days (of which 126 are paid at 100 % of average salary
+by the State; Silknet tops up the remainder to 100 % for up to 60 additional days).
+Employees may extend unpaid to 365 days total.
+
+Paternity leave: 5 working days of paid leave within the first 4 weeks after birth.
+Silknet additionally grants an optional 10 days of unpaid parental leave in the same
+period.
+
+Adoption: Same entitlements as maternity/paternity leave apply from the date of legal
+adoption.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. PERFORMANCE & PROBATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Probation period: All new hires serve a 3-month probationary period. During probation,
+either party may terminate employment with 24 hours' written notice.
+
+Performance reviews: Formal bi-annual reviews are held in June and December. Goals
+(OKRs) are set at the start of each half-year with the line manager and stored in the
+Silknet HR system. Rating scale: Exceeds Expectations / Meets Expectations /
+Needs Improvement / Unsatisfactory.
+
+Salary review: Annual salary adjustments are linked to the December performance review
+and market benchmarking. Merit increases take effect from 1 March.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. CODE OF CONDUCT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+All Silknet employees are expected to act with honesty, respect, and professionalism.
+Harassment, discrimination, and bullying of any kind are grounds for immediate
+disciplinary action up to and including termination.
+
+Conflicts of interest must be declared in writing to the Compliance department before
+any engagement that could compromise impartiality (e.g., working with a supplier,
+owning shares in a competitor).
+
+Confidential business information — customer data, network architecture, financial
+results — must never be shared externally without written authorization from the
+Legal department.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. DISCIPLINARY PROCEDURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Step 1 — Verbal warning (documented in HR file).
+Step 2 — Written warning.
+Step 3 — Final written warning with a Performance Improvement Plan (PIP).
+Step 4 — Termination with statutory notice period.
+
+Gross misconduct (fraud, violence, data breach, etc.) may result in immediate
+termination without prior steps, subject to Georgian Labour Code Article 37.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+10. DRESS CODE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Business casual attire is expected in head-office environments. Field technicians wear
+the Silknet branded uniform at all times when on customer premises. Casual Fridays
+(jeans and clean trainers) are permitted for non-customer-facing staff.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Contact: hr@silknet.com | HR Hotline: +995 32 222 0100 (ext. 1010)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

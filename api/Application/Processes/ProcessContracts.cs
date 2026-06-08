@@ -17,6 +17,11 @@ public record ContractClause(string Clause, string Risk, string Finding);
 public record ContractReportDoc(
     string OverallRisk, IReadOnlyList<ContractClause> Clauses, IReadOnlyList<string> Recommendations);
 
+/// <summary>A support/incident report for a Jira ticket, ready to render to PDF.</summary>
+public record TicketReportDoc(
+    string Key, string Title, string Severity, string Summary, string Impact,
+    string Status, string RootCauseHypothesis, IReadOnlyList<string> RecommendedActions);
+
 // ----- integration service interfaces (implemented in Infrastructure) -----
 
 /// <summary>Renders business documents to PDF bytes (QuestPDF under the hood).</summary>
@@ -24,6 +29,7 @@ public interface IPdfService
 {
     byte[] RenderInvoice(InvoiceDoc doc);
     byte[] RenderContractReport(ContractReportDoc doc, string title);
+    byte[] RenderTicketReport(TicketReportDoc doc);
 }
 
 /// <summary>Builds RFC-5545 iCalendar (.ics) payloads for calendar holds/invites.</summary>

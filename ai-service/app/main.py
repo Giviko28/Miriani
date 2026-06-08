@@ -305,6 +305,7 @@ class AgentRequest(BaseModel):
     # Ephemeral file attached to THIS message only — extracted text, never stored/embedded.
     attachment_text: str | None = None
     attachment_name: str | None = None
+    user_name: str | None = None
 
 
 class AgentResponse(BaseModel):
@@ -319,9 +320,11 @@ class AgentResponse(BaseModel):
 async def agent_run(req: AgentRequest) -> AgentResponse:
     """Route the request to the right specialized agent and return its result."""
     history = [t.model_dump() for t in req.history] if req.history else None
+    print(f"DEBUG: user_name received = {req.user_name!r}")
     state = await run_agents(
         org_id=req.org_id, role_level=req.role_level, query=req.query, history=history,
         attachment_text=req.attachment_text, attachment_name=req.attachment_name,
+        user_name=req.user_name,
     )
     sources = [SourceDto(**s) for s in state.get("sources", [])]
     return AgentResponse(
@@ -331,3 +334,42 @@ async def agent_run(req: AgentRequest) -> AgentResponse:
         sources=sources,
         structured=state.get("structured"),
     )
+
+
+# ---------- Jira ticket action drafts ----------
+
+class JiraDraftRequest(BaseModel):
+    org_id: str
+    role_level: int = 0
+    action: str  # "alert" | "email" | "report"
+    ticket: dict  # {key, summary, status, issue_type, priority, description, comments[]}
+    manager_name: str | None = None
+
+
+class JiraDraftResponse(BaseModel):
+    action: str
+    structured: dict
+
+
+@app.post("/jira/draft", response_model=JiraDraftResponse)
+async def jira_draft(req: JiraDraftRequest) -> JiraDraftResponse:
+    """Draft an AI action (Slack alert / manager email / report) for an existing Jira ticket.
+
+    Deterministic dispatch on `action` — the result is reviewed/edited by the human before the
+    .NET gateway performs the real side-effect. Nothing about the ticket is stored or embedded.
+    """
+    from app.agents.jira_actions import DRAFTERS
+
+    drafter = DRAFTERS.get(req.action)
+    if drafter is None:
+        raise HTTPException(status_code=400, detail=f"Unknown action '{req.action}'.")
+
+    if req.action == "email":
+        structured = await drafter(
+            org_id=req.org_id, role_level=req.role_level, ticket=req.ticket,
+            manager_name=req.manager_name,
+        )
+    else:
+        structured = await drafter(org_id=req.org_id, role_level=req.role_level, ticket=req.ticket)
+
+    return JiraDraftResponse(action=req.action, structured=structured)

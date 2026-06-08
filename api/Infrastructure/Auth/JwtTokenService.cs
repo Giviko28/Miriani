@@ -18,7 +18,7 @@ public class JwtTokenService(IOptions<JwtOptions> options) : ITokenService
 
     private readonly JwtOptions _opt = options.Value;
 
-    public (string Token, DateTime ExpiresAt) CreateToken(Guid userId, Guid orgId, string email, UserRole role)
+    public (string Token, DateTime ExpiresAt) CreateToken(Guid userId, Guid orgId, string email, UserRole role, string displayName)
     {
         var expiresAt = DateTime.UtcNow.AddMinutes(_opt.ExpiryMinutes);
 
@@ -26,6 +26,7 @@ public class JwtTokenService(IOptions<JwtOptions> options) : ITokenService
         {
             new Claim(JwtRegisteredClaimNames.Sub, userId.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, email),
+            new Claim(JwtRegisteredClaimNames.Name, displayName),
             new Claim(ClaimTypes.Role, role.ToString()),
             new Claim(OrgClaim, orgId.ToString()),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),

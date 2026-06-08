@@ -1,30 +1,14 @@
 import { useState } from "react";
 import { api, type ChatMessage } from "../api";
-import { Badge, Card } from "../ui";
 
-const RISK_COLORS: Record<string, string> = {
-  High: "bg-red-100 text-red-700",
-  Medium: "bg-yellow-100 text-yellow-700",
-  Low: "bg-green-100 text-green-700",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  approved: "bg-green-100 text-green-700",
-  pending: "bg-yellow-100 text-yellow-700",
-  flagged: "bg-red-100 text-red-700",
-};
 
 export const ROUTE_LABELS: Record<string, string> = {
-  policy_qa: "Policy Q&A",
-  doc_summary: "Summarizer",
-  email_draft: "Email Drafter",
-  report_draft: "Report Drafter",
-  invoice_gen: "Invoice Generator",
-  leave_request: "Leave Request",
-  onboarding_gen: "Onboarding Kit",
-  contract_scan: "Contract Scanner",
-  db_query: "Database Query",
+  greeting:      "Miriani",
+  policy_qa:     "Policy Q&A",
+  email_draft:   "Email Draft",
   ticket_triage: "IT Helpdesk",
+  ticket_advice: "Helpdesk Advisor",
+  db_query:      "Incident Report",
 };
 
 type ParsedSource = { fileName: string; distance: number; text: string };
@@ -52,140 +36,6 @@ function parseStructured(json: string | null): unknown | null {
   }
 }
 
-function LeaveCard({ data }: { data: any }) {
-  const status: string = data.status ?? "pending";
-  return (
-    <div className="mt-4 space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${STATUS_COLORS[status] ?? "bg-slate-100 text-slate-600"}`}>
-          {status}
-        </span>
-        {data.days_requested != null && (
-          <span className="text-sm text-slate-600">{data.days_requested} day(s)</span>
-        )}
-        {data.start_date && data.end_date && (
-          <span className="text-sm text-slate-500">{data.start_date} – {data.end_date}</span>
-        )}
-      </div>
-      {data.policy_note && (
-        <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">{data.policy_note}</p>
-      )}
-      {data.formal_letter && (
-        <details className="rounded-md border border-slate-200">
-          <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-slate-700">Formal Letter</summary>
-          <pre className="whitespace-pre-wrap px-3 pb-3 pt-1 text-xs text-slate-600">{data.formal_letter}</pre>
-        </details>
-      )}
-    </div>
-  );
-}
-
-function OnboardingCard({ data }: { data: any }) {
-  const phases = [
-    { label: "Day 1", key: "day_1" },
-    { label: "Week 1", key: "week_1" },
-    { label: "Month 1", key: "month_1" },
-  ];
-  return (
-    <div className="mt-4 space-y-3">
-      {data.role && <p className="text-xs font-semibold text-slate-700">Role: {data.role}{data.employee_name ? ` · ${data.employee_name}` : ""}{data.start_date ? ` · Starting ${data.start_date}` : ""}</p>}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {phases.map(({ label, key }) => {
-          const items: string[] = data[key] ?? [];
-          return (
-            <div key={key} className="rounded-md border border-slate-200 bg-slate-50 p-3">
-              <p className="mb-2 text-xs font-semibold text-slate-700">{label}</p>
-              <ul className="space-y-1">
-                {items.map((item, i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-xs text-slate-600">
-                    <span className="mt-0.5 text-slate-400">☐</span>{item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function ContractCard({ data }: { data: any }) {
-  const overall: string = data.overall_risk ?? "Unknown";
-  const clauses: any[] = data.clauses ?? [];
-  const recommendations: string[] = data.recommendations ?? [];
-  return (
-    <div className="mt-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-semibold text-slate-600">Overall Risk:</span>
-        <span className={`rounded-full px-3 py-0.5 text-xs font-semibold ${RISK_COLORS[overall] ?? "bg-slate-100 text-slate-600"}`}>{overall}</span>
-      </div>
-      {clauses.length > 0 && (
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-slate-200 text-left text-slate-500">
-              <th className="pb-1 pr-3 font-medium">Clause</th>
-              <th className="pb-1 pr-3 font-medium">Risk</th>
-              <th className="pb-1 font-medium">Finding</th>
-            </tr>
-          </thead>
-          <tbody>
-            {clauses.map((c, i) => (
-              <tr key={i} className="border-b border-slate-100">
-                <td className="py-1.5 pr-3 text-slate-700">{c.clause}</td>
-                <td className="py-1.5 pr-3">
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${RISK_COLORS[c.risk] ?? "bg-slate-100 text-slate-600"}`}>{c.risk}</span>
-                </td>
-                <td className="py-1.5 text-slate-500">{c.finding}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {recommendations.length > 0 && (
-        <div className="rounded-md bg-blue-50 p-3">
-          <p className="mb-1 text-xs font-semibold text-blue-700">Recommendations</p>
-          <ul className="list-inside list-disc space-y-0.5 text-xs text-blue-600">
-            {recommendations.map((r, i) => <li key={i}>{r}</li>)}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function InvoiceCard({ data }: { data: any }) {
-  const items: any[] = data.items ?? [];
-  return (
-    <div className="mt-4 space-y-3">
-      {data.client && <p className="text-xs font-semibold text-slate-700">Client: {data.client}</p>}
-      {items.length > 0 && (
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-slate-200 text-left text-slate-500">
-              <th className="pb-1 pr-3 font-medium">Description</th>
-              <th className="pb-1 pr-3 font-medium">Qty</th>
-              <th className="pb-1 font-medium">Unit Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, i) => (
-              <tr key={i} className="border-b border-slate-100">
-                <td className="py-1.5 pr-3 text-slate-700">{item.description}</td>
-                <td className="py-1.5 pr-3 text-slate-500">{item.quantity ?? item.qty}</td>
-                <td className="py-1.5 text-slate-500">{item.unit_price ?? item.price}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      {data.total != null && (
-        <p className="text-right text-sm font-semibold text-slate-800">Total: {data.total} {data.currency ?? ""}</p>
-      )}
-      {data.notes && <p className="text-xs text-slate-500">{data.notes}</p>}
-    </div>
-  );
-}
 
 function DbQueryCard({ data }: { data: any }) {
   const rows: Record<string, unknown>[] = data.rows ?? [];
@@ -227,33 +77,66 @@ function DbQueryCard({ data }: { data: any }) {
   );
 }
 
-const PRIORITY_COLORS: Record<string, string> = {
-  Critical: "bg-red-100 text-red-700",
-  High: "bg-orange-100 text-orange-700",
-  Medium: "bg-yellow-100 text-yellow-700",
-  Low: "bg-green-100 text-green-700",
+const PRIORITY_ICONS: Record<string, { icon: string; color: string }> = {
+  Critical: { icon: "⬆⬆", color: "text-red-600" },
+  High:     { icon: "⬆",   color: "text-orange-500" },
+  Medium:   { icon: "▶",   color: "text-yellow-500" },
+  Low:      { icon: "⬇",   color: "text-blue-400" },
 };
 
 function TicketCard({ data }: { data: any }) {
   const priority: string = data.priority ?? "Medium";
+  const p = PRIORITY_ICONS[priority] ?? { icon: "▶", color: "text-slate-400" };
+
   return (
-    <div className="mt-4 space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${PRIORITY_COLORS[priority] ?? "bg-slate-100 text-slate-600"}`}>{priority}</span>
-        {data.issue_type && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{data.issue_type}</span>}
-        {data.category && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{data.category}</span>}
+    <div className="mt-4 rounded-lg border border-slate-200 overflow-hidden">
+      {/* Header bar */}
+      <div className="flex items-center gap-2 border-b border-slate-200 bg-slate-50 px-4 py-2.5">
+        <svg viewBox="0 0 24 24" className="h-4 w-4 text-blue-600 shrink-0" fill="currentColor">
+          <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">IT Support Ticket</span>
       </div>
-      {data.summary && <p className="text-sm font-semibold text-slate-800">{data.summary}</p>}
-      {data.description && <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">{data.description}</p>}
+
+      <div className="px-4 py-3 space-y-3 bg-white">
+        {/* Summary / title */}
+        {data.summary && (
+          <p className="text-sm font-semibold text-slate-900 leading-snug">{data.summary}</p>
+        )}
+
+        {/* Metadata fields */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
+          <div>
+            <span className="block text-slate-400 mb-0.5">Priority</span>
+            <span className={`font-medium ${p.color}`}>{p.icon} {priority}</span>
+          </div>
+          {data.issue_type && (
+            <div>
+              <span className="block text-slate-400 mb-0.5">Type</span>
+              <span className="font-medium text-slate-700">{data.issue_type}</span>
+            </div>
+          )}
+          {data.category && (
+            <div>
+              <span className="block text-slate-400 mb-0.5">Category</span>
+              <span className="font-medium text-slate-700">{data.category}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Description */}
+        {data.description && (
+          <div>
+            <span className="block text-xs text-slate-400 mb-1">Description</span>
+            <p className="text-xs text-slate-600 leading-relaxed border-l-2 border-slate-200 pl-3">{data.description}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function StructuredCard({ route, data }: { route: string; data: unknown }) {
-  if (route === "leave_request") return <LeaveCard data={data} />;
-  if (route === "onboarding_gen") return <OnboardingCard data={data} />;
-  if (route === "contract_scan") return <ContractCard data={data} />;
-  if (route === "invoice_gen") return <InvoiceCard data={data} />;
   if (route === "db_query") return <DbQueryCard data={data} />;
   if (route === "ticket_triage") return <TicketCard data={data} />;
   return (
@@ -265,15 +148,26 @@ function StructuredCard({ route, data }: { route: string; data: unknown }) {
 
 // --- action buttons: turn a structured chat result into a real-world action ---
 
-function ActionButton({ label, onClick, busy, tone = "blue" }: { label: string; onClick: () => void; busy: boolean; tone?: "blue" | "slate" }) {
-  const cls = tone === "blue" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-700 hover:bg-slate-800";
+function ActionButton({ label, onClick, busy, tone = "blue", icon }: { label: string; onClick: () => void; busy: boolean; tone?: "blue" | "slate" | "green" | "outline"; icon?: string }) {
+  const cls =
+    tone === "blue"    ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/25 text-white shadow-md hover:shadow-lg" :
+    tone === "green"   ? "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-500/25 text-white shadow-md hover:shadow-lg" :
+    tone === "slate"   ? "bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 shadow-slate-500/25 text-white shadow-md hover:shadow-lg" :
+    /* outline */        "border border-slate-300 bg-white hover:bg-slate-50 text-slate-700";
   return (
     <button
       onClick={onClick}
       disabled={busy}
-      className={`rounded-md px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 ${cls}`}
+      className={`inline-flex items-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition-all duration-150 active:scale-[0.97] disabled:opacity-50 disabled:pointer-events-none ${cls}`}
     >
-      {busy ? "Working…" : label}
+      {busy ? (
+        <>
+          <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-current/30 border-t-current" />
+          Processing…
+        </>
+      ) : (
+        <>{icon && <span>{icon}</span>}{label}</>
+      )}
     </button>
   );
 }
@@ -282,9 +176,8 @@ function ProcessActions({ route, data }: { route: string; data: any }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [email, setEmail] = useState("");
 
-  if (!["leave_request", "invoice_gen", "ticket_triage", "onboarding_gen", "contract_scan"].includes(route)) return null;
+  if (route !== "ticket_triage") return null;
 
   async function run(fn: () => Promise<string>) {
     setBusy(true); setError(null); setResult(null);
@@ -294,45 +187,26 @@ function ProcessActions({ route, data }: { route: string; data: any }) {
   }
 
   return (
-    <div className="mt-4 border-t border-slate-100 pt-3">
-      <div className="flex flex-wrap items-center gap-2">
-        {route === "leave_request" && (
-          <ActionButton label="Email manager for approval" busy={busy}
-            onClick={() => run(async () => { const r = await api.processes.submitLeave(data, email); return `Sent to ${r.to}${r.calendarAttached ? " with a calendar hold" : ""}.`; })} />
-        )}
-        {route === "invoice_gen" && (
-          <>
-            <ActionButton label="Download PDF" tone="slate" busy={busy}
-              onClick={() => run(async () => { await api.processes.invoicePdf(data); return "PDF downloaded."; })} />
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="client@email.com"
-              className="rounded-md border border-slate-200 px-2 py-1 text-xs" />
-            <ActionButton label="Email invoice" busy={busy}
-              onClick={() => run(async () => { const r = await api.processes.invoiceEmail(data, email); return `Invoice emailed to ${r.to}.`; })} />
-          </>
-        )}
-        {route === "ticket_triage" && (
-          <ActionButton label="Create Jira ticket" busy={busy}
-            onClick={() => run(async () => { const r = await api.processes.createTicket(data); return `Created ${r.key}${r.simulated ? " (local demo ticket)" : ""}.`; })} />
-        )}
-        {route === "onboarding_gen" && (
-          <>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="newhire@email.com (optional)"
-              className="rounded-md border border-slate-200 px-2 py-1 text-xs" />
-            <ActionButton label="Provision onboarding" busy={busy}
-              onClick={() => run(async () => { const r = await api.processes.provisionOnboarding(data, email); return `Created ${r.tickets.length} task(s)${r.emailSent ? " and sent a welcome email" : ""}.`; })} />
-          </>
-        )}
-        {route === "contract_scan" && (
-          <>
-            <ActionButton label="Download report PDF" tone="slate" busy={busy}
-              onClick={() => run(async () => { await api.processes.contractReport(data); return "Report downloaded."; })} />
-            <ActionButton label="Send channel alert" busy={busy}
-              onClick={() => run(async () => { const r = await api.processes.contractAlert(data); return r.alerted ? "Alert sent to the channel." : "Logged (no webhook configured)."; })} />
-          </>
-        )}
+    <div className="mt-4 border-t border-slate-100 pt-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <ActionButton label="Create Jira ticket" tone="outline" busy={busy}
+          onClick={() => run(async () => {
+            const r = await api.processes.createTicket(data);
+            return `✓ Created ${r.key}${r.simulated ? " (local demo ticket)" : ""}.`;
+          })} />
       </div>
-      {result && <p className="mt-2 text-xs font-medium text-green-700">✓ {result}</p>}
-      {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
+      {result && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 animate-fade-in">
+          <span className="text-emerald-600 text-sm">✓</span>
+          <p className="text-xs font-medium text-emerald-700">{result}</p>
+        </div>
+      )}
+      {error && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 animate-fade-in">
+          <span className="text-red-500 text-sm">✕</span>
+          <p className="text-xs font-medium text-red-600">{error}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -340,8 +214,8 @@ function ProcessActions({ route, data }: { route: string; data: any }) {
 export function MessageBubble({ message }: { message: ChatMessage }) {
   if (message.sender === "user") {
     return (
-      <div className="flex justify-end">
-        <div className="max-w-[80%] whitespace-pre-wrap rounded-2xl bg-slate-900 px-4 py-2 text-sm text-white">
+      <div className="flex justify-end animate-fade-in">
+        <div className="max-w-[78%] whitespace-pre-wrap rounded-2xl rounded-tr-sm bg-blue-600 px-4 py-3 text-sm text-white">
           {message.content}
         </div>
       </div>
@@ -350,38 +224,53 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
 
   const sources = parseSources(message.sources);
   const structured = parseStructured(message.structured);
+  const routeLabel = message.route ? (ROUTE_LABELS[message.route] ?? message.route) : null;
 
   return (
-    <Card>
-      <div className="flex items-center gap-2">
-        {message.route && <Badge tone="blue">{ROUTE_LABELS[message.route] ?? message.route}</Badge>}
-        {message.usedContext && <Badge tone="green">grounded</Badge>}
+    <div className="flex items-start gap-3 animate-fade-in sm:mr-16">
+      {/* Avatar */}
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-semibold text-white select-none">
+        M
       </div>
 
-      <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
-
-      {structured !== null && (
-        <>
-          <StructuredCard route={message.route ?? ""} data={structured} />
-          <ProcessActions route={message.route ?? ""} data={structured} />
-        </>
-      )}
-
-      {sources.length > 0 && (
-        <div className="mt-5">
-          <h3 className="text-sm font-semibold text-slate-700">Sources</h3>
-          <ul className="mt-2 space-y-2">
-            {sources.map((s, i) => (
-              <li key={i} className="rounded-md border border-slate-100 bg-slate-50 p-3 text-xs">
-                <div className="font-medium text-slate-700">
-                  {s.fileName} <span className="text-slate-400">· distance {s.distance.toFixed(3)}</span>
-                </div>
-                <p className="mt-1 line-clamp-2 text-slate-500">{s.text}</p>
-              </li>
-            ))}
-          </ul>
+      {/* Bubble */}
+      <div className="flex-1 rounded-2xl rounded-tl-sm border border-slate-200 bg-white px-4 py-3">
+        {/* sender + route */}
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-xs font-semibold text-slate-800">Miriani</span>
+          {routeLabel && (
+            <span className="text-xs text-slate-400">· {routeLabel}</span>
+          )}
         </div>
-      )}
-    </Card>
+
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800">{message.content}</p>
+
+        {structured !== null && (
+          <>
+            <StructuredCard route={message.route ?? ""} data={structured} />
+            <ProcessActions route={message.route ?? ""} data={structured} />
+          </>
+        )}
+
+        {sources.length > 0 && (
+          <details className="mt-4 group">
+            <summary className="flex cursor-pointer items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors select-none w-fit">
+              <svg className="h-3 w-3 transition-transform group-open:rotate-90" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+              </svg>
+              {sources.length} source{sources.length !== 1 ? "s" : ""}
+            </summary>
+            <ul className="mt-2 space-y-1.5">
+              {sources.map((s, i) => (
+                <li key={i} className="rounded-md border border-slate-100 bg-slate-50 p-3 text-xs">
+                  <div className="font-medium text-slate-600">{s.fileName}</div>
+                  <p className="mt-0.5 line-clamp-2 text-slate-400">{s.text}</p>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
+    </div>
   );
 }

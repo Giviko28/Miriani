@@ -18,8 +18,8 @@ class Settings(BaseSettings):
     # near-0 for routing/SQL/JSON (determinism), higher for drafting (fluency).
     num_ctx: int = 8192
     default_temperature: float = 0.3
-    top_p: float = 0.9
-    repeat_penalty: float = 1.1
+    top_p: float = 0.8
+    repeat_penalty: float = 1.15
 
     # Vector store (embedded, persistent ChromaDB)
     chroma_path: str = "./chroma_store"
@@ -31,12 +31,10 @@ class Settings(BaseSettings):
 
     # Retrieval
     top_k: int = 4
-    # Cosine-distance ceiling (0 = identical, 2 = opposite). Chunks beyond this are
-    # dropped as irrelevant so the assistant says "I don't have that" instead of
-    # grounding on the least-bad match. Backstop only: with nomic embeddings real
-    # matches sit ~0.3-0.7, so this catches genuine garbage; the grounding system
-    # prompt is the primary guard for the medium-relevance gray zone.
-    retrieval_max_distance: float = 1.0
+    # Cosine-distance ceiling (0 = identical, 2 = opposite). With nomic-embed-text,
+    # genuine topic matches land at 0.3–0.55; anything above 0.65 is off-topic noise
+    # that causes the model to hallucinate rather than say "I don't know".
+    retrieval_max_distance: float = 0.65
 
 
 settings = Settings()

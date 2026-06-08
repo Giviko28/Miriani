@@ -36,7 +36,7 @@ public interface IAuthService
 /// <summary>Issues signed JWTs carrying the user's identity, org, and role claims.</summary>
 public interface ITokenService
 {
-    (string Token, DateTime ExpiresAt) CreateToken(Guid userId, Guid orgId, string email, UserRole role);
+    (string Token, DateTime ExpiresAt) CreateToken(Guid userId, Guid orgId, string email, UserRole role, string displayName);
 }
 
 /// <summary>Hashes and verifies passwords. Implementation chooses the algorithm.</summary>

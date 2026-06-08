@@ -12,4 +12,5 @@ public interface ICurrentUser
     Guid UserId { get; }
     Guid OrgId { get; }
     UserRole Role { get; }
+    string DisplayName { get; }
 }

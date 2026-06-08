@@ -25,6 +25,6 @@ public interface IChatService
 {
     Task<IReadOnlyList<ChatSessionSummary>> ListSessionsAsync(Guid orgId, Guid userId, CancellationToken ct = default);
     Task<ChatThread?> GetThreadAsync(Guid orgId, Guid userId, Guid sessionId, CancellationToken ct = default);
-    Task<SendMessageResult> SendAsync(Guid orgId, Guid userId, UserRole role, SendMessageRequest req, CancellationToken ct = default);
+    Task<SendMessageResult> SendAsync(Guid orgId, Guid userId, UserRole role, string displayName, SendMessageRequest req, CancellationToken ct = default);
     Task<bool> DeleteAsync(Guid orgId, Guid userId, Guid sessionId, CancellationToken ct = default);
 }

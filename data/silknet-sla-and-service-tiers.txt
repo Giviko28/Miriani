@@ -1,0 +1,96 @@
+SILKNET LLC — SERVICE LEVEL AGREEMENT (SLA) & CLIENT TIER REFERENCE
+Internal Operations Document | Rev 5.1 | January 2025
+
+This document is the authoritative reference for account managers, NOC engineers,
+and customer success teams when discussing SLA commitments with clients or calculating
+service credits after an incident.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SERVICE TIERS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TIER 1 — RESIDENTIAL (Bronze)
+  Target uptime:        99.5 % per calendar month (~3.6 h allowed downtime)
+  Restoration target:   4 hours from ticket creation
+  SLA credit:           None (residential is best-effort)
+  Support channel:      Call centre: 032 222 8000; self-service portal
+  Examples:             Home fiber, residential IPTV, consumer mobile
+
+TIER 2 — SME BUSINESS (Silver)
+  Target uptime:        99.9 % per calendar month (~43 min allowed downtime)
+  Restoration target:   2 hours from ticket creation
+  SLA credit:           5 % of monthly invoice per hour of breach beyond target,
+                        capped at 30 % of that month's invoice
+  Support channel:      Dedicated SME helpdesk: 032 222 7000 (08:00–22:00)
+  Eligible companies:   Annual contract value < 24,000 GEL
+  Examples:             Retail shop fiber, small office internet, SME hosted email
+
+TIER 3 — ENTERPRISE (Gold)
+  Target uptime:        99.99 % per calendar month (~4.3 min allowed downtime)
+  Restoration target:   30 minutes from ticket creation
+  SLA credit:           10 % of monthly invoice per hour of breach, capped at 50 %
+  Support channel:      24/7 NOC direct line: 032 222 6000; dedicated TAM assigned
+  Eligible companies:   Annual contract value 24,000–200,000 GEL
+  Examples:             Bank of Georgia SME branches, Silknet B2B dedicated fiber,
+                        multi-site MPLS, Tbilisi City Hall connectivity
+
+TIER 4 — STRATEGIC / PLATINUM
+  Target uptime:        99.99 % with redundant physical path guarantee
+  Restoration target:   15 minutes; automatic failover to backup circuit within 60 sec
+  SLA credit:           20 % of monthly invoice per hour of breach, capped at 100 %;
+                        persistent breaches trigger contract review clause
+  Support channel:      24/7 NOC; named Senior TAM; direct CTO escalation path
+  Eligible companies:   Annual contract value > 200,000 GEL or strategic designation
+  Current Platinum clients (as of Q1 2025):
+    - TBC Bank (all branches + DC interconnect)
+    - Bank of Georgia (headquarter + 12 regional branches)
+    - Georgian Railways (Tbilisi control centre)
+    - Tegeta Motors (head office + 8 showrooms)
+    - Cartu Bank (headquarters + Batumi branch)
+    - Ministry of Finance of Georgia (primary + DR site)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SLA CREDIT CALCULATION — WORKED EXAMPLE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Client: Cartu Bank (Platinum)
+Monthly invoice: 12,400 GEL
+Incident: Headquarters fiber down for 2 hours 45 minutes (165 minutes)
+Allowed downtime: 4.3 minutes
+Breach duration: 160.7 minutes ≈ 2.68 hours
+
+Credit = 20 % × 12,400 × 2.68 = 6,646.40 GEL
+Capped at 100 % of monthly invoice → 12,400 GEL would apply if breach exceeded 5 hours.
+Actual credit: 6,646.40 GEL applied to next month's invoice.
+
+Process: NOC engineer raises credit request in Jira (project: BILLING) linking the
+incident ticket. Finance team approves and applies credit within 3 working days.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PLANNED MAINTENANCE WINDOWS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Standard window: Tuesday and Wednesday nights, 02:00–06:00 Tbilisi Time.
+Notice period:
+  Residential / SME:  5 business days via SMS + status page
+  Enterprise:         10 business days via email to primary technical contact + TAM call
+  Platinum:           15 business days; written confirmation required from client
+
+Emergency maintenance (network safety risk only):
+  Residential:        2 hours notice via SMS
+  Enterprise/Platinum: Phone call to primary NOC contact; simultaneous Jira update
+
+Maintenance carried out inside the agreed window does NOT count against SLA uptime.
+Maintenance outside the window (without written client approval) counts as unplanned
+downtime and triggers SLA credit as normal.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FORCE MAJEURE EXCLUSIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SLA credits are NOT applicable for downtime caused by:
+  - Acts of God, natural disasters, government orders
+  - Third-party power outages at client premises
+  - Client-side equipment failure or misconfiguration
+  - Upstream international transit outages beyond Silknet's AS border
+  - DDoS attacks targeting the client directly
+
+For disputes, escalate to legal@silknet.com with the incident Jira ticket number.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

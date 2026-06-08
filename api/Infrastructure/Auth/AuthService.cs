@@ -28,7 +28,7 @@ public class AuthService(
         if (user is null || !user.IsActive || !hasher.Verify(request.Password, user.PasswordHash))
             return null;
 
-        var (token, expiresAt) = tokens.CreateToken(user.Id, user.OrgId, user.Email, user.Role);
+        var (token, expiresAt) = tokens.CreateToken(user.Id, user.OrgId, user.Email, user.Role, user.DisplayName);
         var raw = await IssueRefreshTokenAsync(user.Id, ct);
 
         await audit.LogAsync(user.OrgId, user.Id, "user.login", email, ct);
@@ -52,7 +52,7 @@ public class AuthService(
         // Rotate: revoke the presented token, issue a fresh one.
         existing.RevokedAt = now;
         var user = existing.User;
-        var (token, expiresAt) = tokens.CreateToken(user.Id, user.OrgId, user.Email, user.Role);
+        var (token, expiresAt) = tokens.CreateToken(user.Id, user.OrgId, user.Email, user.Role, user.DisplayName);
         var raw = await IssueRefreshTokenAsync(user.Id, ct);
         return new TokenPair(token, raw, expiresAt);
     }
