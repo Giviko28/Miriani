@@ -32,6 +32,12 @@ export function ChangePassword({ forced = false, onDone }: { forced?: boolean; o
 
   const body = (
     <Card className="w-full max-w-sm">
+      {forced && (
+        <div className="mb-4 flex flex-col items-center text-center">
+          <img src="/miriani-logo.png" alt="Miriani AI" className="h-16 w-16 object-contain" />
+          <div className="mt-2 text-lg font-bold tracking-tight text-slate-800">Miriani AI</div>
+        </div>
+      )}
       <h1 className="text-xl font-semibold">{forced ? "Set a new password" : "Change password"}</h1>
       <p className="mt-1 text-sm text-slate-500">
         {forced

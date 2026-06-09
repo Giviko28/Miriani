@@ -25,10 +25,13 @@ export function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center p-4">
       <Card className="w-full max-w-sm">
-        <h1 className="text-xl font-semibold">Business Process Automation</h1>
-        <p className="mt-1 text-sm text-slate-500">Sign in to your workspace</p>
+        <div className="flex flex-col items-center text-center">
+          <img src="/miriani-logo.png" alt="Miriani AI" className="h-20 w-20 object-contain" />
+          <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-800">Miriani AI</h1>
+          <p className="mt-1 text-sm text-slate-500">Your AI business-process assistant</p>
+        </div>
 
-        <form onSubmit={submit} className="mt-5 space-y-3">
+        <form onSubmit={submit} className="mt-6 space-y-3">
           <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
 

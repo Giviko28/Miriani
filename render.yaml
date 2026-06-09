@@ -1,0 +1,69 @@
+# Render Blueprint — one-click deploy of the whole stack (Infrastructure as Code).
+# Pushing to the connected branch auto-deploys every service (this is the "CD" half).
+#
+# IMPORTANT: the cross-service URLs below assume these exact service names are available.
+# Render's free tier has no private services or persistent disks, so the gateway reaches the
+# AI service over its public URL. If Render appends a suffix because a name is taken, update
+# the three *_BaseUrl / VITE_API_BASE / Cors__AllowedOrigins__0 values to match the real URLs.
+#
+# Database is Neon (external, free): paste its connection string into ConnectionStrings__Default.
+
+services:
+  # 1) Python AI service (FastAPI + ChromaDB). Groq chat + local CPU embeddings in the cloud.
+  - type: web
+    name: miriani-ai
+    runtime: docker
+    rootDir: ai-service
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    envVars:
+      - key: LLM_PROVIDER
+        value: groq
+      - key: EMBEDDING_PROVIDER
+        value: local
+      - key: GROQ_API_KEY
+        sync: false # set in the dashboard (from console.groq.com)
+      - key: RETRIEVAL_MAX_DISTANCE
+        value: "0.75" # all-MiniLM cosine distances run a touch higher than nomic
+
+  # 2) .NET gateway. Talks to Postgres (Neon) + the AI service; served to the browser.
+  - type: web
+    name: miriani-api
+    runtime: docker
+    rootDir: api
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: frankfurt
+    healthCheckPath: /
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__Default
+        sync: false # paste the Neon connection string (postgres://... is accepted)
+      - key: Jwt__Secret
+        generateValue: true # Render generates a strong secret
+      - key: Seed__RootAdminPassword
+        sync: false # the first admin login password
+      - key: AiService__BaseUrl
+        value: https://miriani-ai.onrender.com
+      - key: Cors__AllowedOrigins__0
+        value: https://miriani-web.onrender.com
+
+  # 3) React frontend (static). Built with Vite; talks only to the gateway.
+  - type: web
+    name: miriani-web
+    runtime: static
+    rootDir: web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE
+        value: https://miriani-api.onrender.com
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -1,4 +1,5 @@
 import { AuthProvider, useAuth } from "./auth";
+import { BrandingProvider } from "./branding";
 import { Login } from "./views/Login";
 import { Chat } from "./views/Chat";
 import { ChangePassword } from "./views/ChangePassword";
@@ -18,7 +19,9 @@ function Shell() {
 export default function App() {
   return (
     <AuthProvider>
-      <Shell />
+      <BrandingProvider>
+        <Shell />
+      </BrandingProvider>
     </AuthProvider>
   );
 }

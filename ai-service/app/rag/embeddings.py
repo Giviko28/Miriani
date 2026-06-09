@@ -35,3 +35,19 @@ class OllamaEmbeddingFunction(EmbeddingFunction):
     @staticmethod
     def build_from_config(config: dict) -> "OllamaEmbeddingFunction":
         return OllamaEmbeddingFunction()
+
+
+def get_embedding_function() -> EmbeddingFunction:
+    """Return the embedding function for the configured provider.
+
+    Local dev defaults to Ollama (nomic-embed-text on the host GPU). The cloud deployment
+    sets EMBEDDING_PROVIDER=local to use Chroma's bundled ONNX all-MiniLM model, which runs
+    on CPU in-process with no API key and no GPU. The two produce different-dimensioned
+    vectors, but each environment has its own persistent store, so they never mix.
+    """
+    if settings.embedding_provider.lower() == "local":
+        # Imported lazily so the (heavier) onnxruntime stack is only required where it's used.
+        from chromadb.utils import embedding_functions
+
+        return embedding_functions.ONNXMiniLM_L6_V2()
+    return OllamaEmbeddingFunction()

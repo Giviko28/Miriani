@@ -13,10 +13,15 @@ using Microsoft.OpenApi.Models;
 
 const string FrontendCors = "frontend";
 
+// Npgsql 6+ rejects non-UTC DateTimes against 'timestamptz' by default. Our entities store
+// UTC, but this keeps mixed-kind values (and existing code) working without per-column tuning.
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 // --- AI service HTTP client (used by the smoke endpoint and, later, real AI relays) ---
-var aiServiceUrl = builder.Configuration["AiService:BaseUrl"] ?? "http://localhost:8001";
+var aiServiceUrl = Infrastructure.DependencyInjection.EnsureHttpScheme(
+    builder.Configuration["AiService:BaseUrl"]) ?? "http://localhost:8001";
 builder.Services.AddHttpClient("ai", client =>
 {
     client.BaseAddress = new Uri(aiServiceUrl);
@@ -67,10 +72,17 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityRequirement(new OpenApiSecurityRequirement { [scheme] = Array.Empty<string>() });
 });
 
+// CORS origins are configurable so the deployed frontend URL can be allowed without a
+// code change. Defaults to the local Vite dev server. Set Cors:AllowedOrigins (array) or
+// the env var Cors__AllowedOrigins__0=https://your-frontend.onrender.com in the cloud.
+var corsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if (corsOrigins is null || corsOrigins.Length == 0)
+    corsOrigins = new[] { "http://localhost:5173" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCors, policy =>
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins(corsOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod());
 });

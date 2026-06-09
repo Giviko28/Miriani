@@ -34,7 +34,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
         services.AddDbContext<AppDbContext>(options =>
-            options.UseSqlServer(config.GetConnectionString("Default")));
+            options.UseNpgsql(NormalizePostgresConnectionString(config.GetConnectionString("Default"))));
 
         services.Configure<JwtOptions>(config.GetSection(JwtOptions.SectionName));
 
@@ -49,9 +49,10 @@ public static class DependencyInjection
         services.AddScoped<IFaqService, FaqService>();
         services.AddScoped<Application.Chat.IChatService, Infrastructure.Chat.ChatService>();
         services.AddScoped<IOrgDbConfigService, OrgDbConfigService>();
+        services.AddScoped<Application.Org.IOrgBrandingService, Infrastructure.Org.OrgBrandingService>();
 
         // Typed client for the Python AI service.
-        var aiBaseUrl = config["AiService:BaseUrl"] ?? "http://localhost:8001";
+        var aiBaseUrl = EnsureHttpScheme(config["AiService:BaseUrl"]) ?? "http://localhost:8001";
         services.AddHttpClient<IAiService, AiServiceClient>(client =>
         {
             client.BaseAddress = new Uri(aiBaseUrl);
@@ -71,5 +72,72 @@ public static class DependencyInjection
         services.AddHttpClient<INotificationService, WebhookNotificationService>();
 
         return services;
+    }
+
+    /// <summary>
+    /// Ensures a base URL has an http(s) scheme. Render's internal service discovery hands out
+    /// a bare "host:port" for free-tier web services; HttpClient.BaseAddress needs a scheme.
+    /// </summary>
+    public static string? EnsureHttpScheme(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return url;
+        if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+            url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            return url;
+        return "http://" + url;
+    }
+
+    /// <summary>
+    /// Accepts either a native Npgsql keyword connection string or a URI-style one
+    /// (postgres://user:pass@host:port/db?sslmode=require), as handed out by Neon, Render,
+    /// Supabase, etc., and returns a keyword string Npgsql understands. Pasting the provider
+    /// URL straight into the connection-string env var "just works".
+    /// </summary>
+    public static string? NormalizePostgresConnectionString(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return raw;
+        if (!raw.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
+            !raw.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+            return raw;
+
+        var uri = new Uri(raw);
+        var userInfo = uri.UserInfo.Split(':', 2);
+        var builder = new Npgsql.NpgsqlConnectionStringBuilder
+        {
+            Host = uri.Host,
+            Port = uri.IsDefaultPort ? 5432 : uri.Port,
+            Database = uri.AbsolutePath.TrimStart('/'),
+            Username = Uri.UnescapeDataString(userInfo[0]),
+            Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : null,
+        };
+
+        // Carry query-string options through (sslmode, channel_binding, etc.).
+        foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = pair.Split('=', 2);
+            var key = Uri.UnescapeDataString(kv[0]);
+            var value = kv.Length > 1 ? Uri.UnescapeDataString(kv[1]) : null;
+            switch (key.ToLowerInvariant())
+            {
+                case "sslmode":
+                    if (Enum.TryParse<Npgsql.SslMode>(value, ignoreCase: true, out var mode))
+                        builder.SslMode = mode;
+                    break;
+                case "channel_binding":
+                    builder.ChannelBinding = value?.ToLowerInvariant() switch
+                    {
+                        "require" => Npgsql.ChannelBinding.Require,
+                        "disable" => Npgsql.ChannelBinding.Disable,
+                        _ => Npgsql.ChannelBinding.Prefer,
+                    };
+                    break;
+            }
+        }
+
+        // Managed Postgres (Neon/Render/Supabase) always requires TLS.
+        if (builder.SslMode == Npgsql.SslMode.Disable)
+            builder.SslMode = Npgsql.SslMode.Require;
+
+        return builder.ConnectionString;
     }
 }
