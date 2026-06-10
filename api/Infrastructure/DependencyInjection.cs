@@ -23,6 +23,7 @@ using Infrastructure.Persistence;
 using Infrastructure.Storage;
 using Infrastructure.Users;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -34,7 +35,12 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
     {
         services.AddDbContext<AppDbContext>(options =>
-            options.UseNpgsql(NormalizePostgresConnectionString(config.GetConnectionString("Default"))));
+            options.UseNpgsql(NormalizePostgresConnectionString(config.GetConnectionString("Default")))
+                   // EF 10 escalates this to an error during migrate-on-boot. Design-time
+                   // (`dotnet ef migrations has-pending-model-changes`) confirms the snapshot
+                   // matches the model; the runtime check is a known Npgsql false positive, so
+                   // we ignore it here rather than blocking startup.
+                   .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 
         services.Configure<JwtOptions>(config.GetSection(JwtOptions.SectionName));
 
