@@ -37,6 +37,7 @@ public static class DependencyInjection
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<IFaqService, FaqService>();
+        services.AddScoped<Application.Chat.IChatService, Infrastructure.Chat.ChatService>();
 
         // Typed client for the Python AI service.
         var aiBaseUrl = config["AiService:BaseUrl"] ?? "http://localhost:8001";
