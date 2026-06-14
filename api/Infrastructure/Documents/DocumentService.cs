@@ -19,6 +19,7 @@ public class DocumentService(
     IFileStorage storage,
     IAiService ai,
     ICurrentUser currentUser,
+    IAuditLogger audit,
     ILogger<DocumentService> logger) : IDocumentService
 {
     public async Task<DocumentDto> UploadAsync(UploadFile file, UserRole accessRole, CancellationToken ct = default)
@@ -58,6 +59,8 @@ public class DocumentService(
         }
         await db.SaveChangesAsync(ct);
 
+        await audit.LogAsync(orgId, currentUser.UserId, "document.upload",
+            $"{doc.FileName} ({doc.Status})", ct);
         return ToDto(doc);
     }
 

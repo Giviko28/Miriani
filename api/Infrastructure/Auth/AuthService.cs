@@ -1,4 +1,5 @@
 using Application.Auth;
+using Application.Common;
 using Domain.Entities;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,8 @@ namespace Infrastructure.Auth;
 public class AuthService(
     AppDbContext db,
     IPasswordHasher hasher,
-    ITokenService tokens) : IAuthService
+    ITokenService tokens,
+    IAuditLogger audit) : IAuthService
 {
     private const string DefaultOrgName = "Demo Company";
 
@@ -36,6 +38,7 @@ public class AuthService(
         db.Users.Add(user);
         await db.SaveChangesAsync(ct);
 
+        await audit.LogAsync(org.Id, user.Id, "user.register", $"{email} as {user.Role}", ct);
         return BuildResponse(user);
     }
 
@@ -46,6 +49,7 @@ public class AuthService(
         if (user is null || !hasher.Verify(request.Password, user.PasswordHash))
             return null;
 
+        await audit.LogAsync(user.OrgId, user.Id, "user.login", email, ct);
         return BuildResponse(user);
     }
 
