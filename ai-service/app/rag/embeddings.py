@@ -27,3 +27,11 @@ class OllamaEmbeddingFunction(EmbeddingFunction):
     # Chroma 1.x requires these for persistence/telemetry of custom embedders.
     def name(self) -> str:
         return f"ollama:{settings.embedding_model}"
+
+    # Persisted alongside the collection so Chroma can reconstruct the embedder.
+    def get_config(self) -> dict:
+        return {"model": settings.embedding_model, "base_url": settings.ollama_base_url}
+
+    @staticmethod
+    def build_from_config(config: dict) -> "OllamaEmbeddingFunction":
+        return OllamaEmbeddingFunction()
