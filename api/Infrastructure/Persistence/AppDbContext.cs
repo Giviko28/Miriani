@@ -14,6 +14,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<BusinessProcess> Processes => Set<BusinessProcess>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<Faq> Faqs => Set<Faq>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -58,6 +60,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Action).HasMaxLength(128).IsRequired();
             e.Property(x => x.Detail).HasMaxLength(2000);
             e.HasIndex(x => new { x.OrgId, x.CreatedAt });
+        });
+
+        b.Entity<RefreshToken>(e =>
+        {
+            e.Property(x => x.TokenHash).HasMaxLength(128).IsRequired();
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId);
+            e.HasIndex(x => x.UserId);
+            e.HasIndex(x => x.TokenHash);
+        });
+
+        b.Entity<Faq>(e =>
+        {
+            e.Property(x => x.Question).HasMaxLength(500).IsRequired();
+            e.HasOne(x => x.Org).WithMany().HasForeignKey(x => x.OrgId);
+            e.HasIndex(x => new { x.OrgId, x.SortOrder });
         });
     }
 }
