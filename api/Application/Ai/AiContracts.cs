@@ -6,6 +6,14 @@ public record AiSource(string DocId, string FileName, int ChunkIndex, double Dis
 
 public record AiAnswer(string Answer, bool UsedContext, IReadOnlyList<AiSource> Sources);
 
+/// <summary>Result of the agent graph: which agent handled it, plus optional structured output.</summary>
+public record AiAgentAnswer(
+    string Route,
+    string Answer,
+    bool UsedContext,
+    IReadOnlyList<AiSource> Sources,
+    IReadOnlyDictionary<string, object>? Structured);
+
 /// <summary>
 /// Gateway to the Python AI service. The .NET layer always supplies org and role from the
 /// authenticated caller — the AI service never decides access on its own.
@@ -17,4 +25,7 @@ public interface IAiService
 
     /// <summary>Retrieve role-scoped context and generate a grounded answer.</summary>
     Task<AiAnswer> QueryAsync(Guid orgId, UserRole role, string query, CancellationToken ct = default);
+
+    /// <summary>Route the request through the agent graph to a specialized agent.</summary>
+    Task<AiAgentAnswer> RunAgentAsync(Guid orgId, UserRole role, string query, CancellationToken ct = default);
 }

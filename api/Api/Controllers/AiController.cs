@@ -33,4 +33,26 @@ public class AiController(IAiService ai, ICurrentUser currentUser) : ControllerB
             return Problem($"AI service unavailable: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// Route a request through the agent system. The router picks the right specialized
+    /// agent (policy Q&amp;A, summarization, email/report drafting, invoice generation).
+    /// Org and role come from the JWT, so retrieval stays role-scoped.
+    /// </summary>
+    [HttpPost("agent")]
+    public async Task<IActionResult> Agent(QueryRequest req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Query))
+            return BadRequest(new { error = "Query is required." });
+
+        try
+        {
+            var result = await ai.RunAgentAsync(currentUser.OrgId, currentUser.Role, req.Query, ct);
+            return Ok(result);
+        }
+        catch (HttpRequestException ex)
+        {
+            return Problem($"AI service unavailable: {ex.Message}");
+        }
+    }
 }

@@ -46,7 +46,30 @@ public class AiServiceClient(HttpClient http) : IAiService
         return new AiAnswer(body.Answer, body.Used_Context, sources);
     }
 
+    public async Task<AiAgentAnswer> RunAgentAsync(Guid orgId, UserRole role, string query, CancellationToken ct = default)
+    {
+        var payload = new
+        {
+            org_id = orgId.ToString(),
+            role_level = (int)role,
+            query,
+        };
+
+        var resp = await http.PostAsJsonAsync("/agent/run", payload, ct);
+        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadFromJsonAsync<AgentBody>(ct)
+                   ?? new AgentBody("", "", false, [], null);
+
+        var sources = body.Sources
+            .Select(s => new AiSource(s.Doc_Id, s.File_Name, s.Chunk_Index, s.Distance, s.Text))
+            .ToList();
+        return new AiAgentAnswer(body.Route, body.Answer, body.Used_Context, sources, body.Structured);
+    }
+
     private record IngestBody(string Doc_Id, int Chunks);
     private record QueryBody(string Answer, bool Used_Context, List<SourceBody> Sources);
+    private record AgentBody(
+        string Route, string Answer, bool Used_Context, List<SourceBody> Sources,
+        Dictionary<string, object>? Structured);
     private record SourceBody(string Doc_Id, string File_Name, int Chunk_Index, double Distance, string Text);
 }

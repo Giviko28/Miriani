@@ -8,7 +8,10 @@ python-multipart==0.0.20
 # RAG pipeline (Milestone 3). chromadb 1.x ships prebuilt (Rust) wheels — no C++ build
 # toolchain required on Windows, unlike the 0.5.x line (chroma-hnswlib).
 chromadb==1.5.9
-langchain-text-splitters==0.3.4
+langchain-text-splitters==1.1.2
 pypdf==5.1.0
 python-docx==1.1.2
 openpyxl==3.1.5
+
+# Agentic system (Milestone 5): router + specialized agents via LangGraph.
+langgraph==1.2.5
