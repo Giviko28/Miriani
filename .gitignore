@@ -30,6 +30,8 @@ __pycache__/
 # ---- Data / models / vectors (not committed) ----
 data/uploads/
 chroma/
+chroma_store/
+ai-service/chroma_store/
 *.gguf
 
 # ---- Secrets ----
