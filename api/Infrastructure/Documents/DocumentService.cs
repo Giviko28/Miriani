@@ -1,25 +1,36 @@
+using Application.Ai;
 using Application.Common;
 using Application.Documents;
 using Domain.Entities;
 using Domain.Enums;
 using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Documents;
 
 /// <summary>
-/// Handles document intake: stores the bytes via IFileStorage and records org-scoped
-/// metadata. Ingestion into ChromaDB (the Indexed transition) is added in Milestone 3.
+/// Handles document intake: stores the bytes via IFileStorage, records org-scoped metadata,
+/// and indexes the content into the vector store via the AI service. Status reflects whether
+/// indexing succeeded (Indexed) or failed (Failed) so the UI can surface it.
 /// </summary>
 public class DocumentService(
     AppDbContext db,
     IFileStorage storage,
-    ICurrentUser currentUser) : IDocumentService
+    IAiService ai,
+    ICurrentUser currentUser,
+    ILogger<DocumentService> logger) : IDocumentService
 {
     public async Task<DocumentDto> UploadAsync(UploadFile file, UserRole accessRole, CancellationToken ct = default)
     {
         var orgId = currentUser.OrgId;
-        var (storagePath, size) = await storage.SaveAsync(orgId, file.FileName, file.Content, ct);
+
+        // Read once: the same bytes are persisted to storage and sent to the AI service.
+        using var ms = new MemoryStream();
+        await file.Content.CopyToAsync(ms, ct);
+        var bytes = ms.ToArray();
+
+        var (storagePath, size) = await storage.SaveAsync(orgId, file.FileName, new MemoryStream(bytes), ct);
 
         var doc = new Document
         {
@@ -28,11 +39,23 @@ public class DocumentService(
             ContentType = file.ContentType,
             SizeBytes = size,
             StoragePath = storagePath,
-            Status = DocumentStatus.Uploaded,
+            Status = DocumentStatus.Processing,
             AccessRole = accessRole,
             UploadedByUserId = currentUser.UserId,
         };
         db.Documents.Add(doc);
+        await db.SaveChangesAsync(ct);
+
+        try
+        {
+            await ai.IngestAsync(orgId, doc.Id, doc.FileName, accessRole, bytes, ct);
+            doc.Status = DocumentStatus.Indexed;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to index document {DocId}", doc.Id);
+            doc.Status = DocumentStatus.Failed;
+        }
         await db.SaveChangesAsync(ct);
 
         return ToDto(doc);

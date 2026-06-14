@@ -1,5 +1,7 @@
+using Application.Ai;
 using Application.Auth;
 using Application.Documents;
+using Infrastructure.Ai;
 using Infrastructure.Auth;
 using Infrastructure.Documents;
 using Infrastructure.Persistence;
@@ -26,6 +28,14 @@ public static class DependencyInjection
 
         services.AddScoped<IFileStorage, LocalFileStorage>();
         services.AddScoped<IDocumentService, DocumentService>();
+
+        // Typed client for the Python AI service.
+        var aiBaseUrl = config["AiService:BaseUrl"] ?? "http://localhost:8001";
+        services.AddHttpClient<IAiService, AiServiceClient>(client =>
+        {
+            client.BaseAddress = new Uri(aiBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(180); // ingestion embeds every chunk
+        });
 
         return services;
     }
