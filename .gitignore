@@ -1,0 +1,38 @@
+# ---- OS / editor ----
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
+*.user
+
+# ---- Node / React (web/) ----
+node_modules/
+dist/
+.vite/
+*.local
+npm-debug.log*
+
+# ---- .NET (api/) ----
+bin/
+obj/
+*.dll
+*.pdb
+appsettings.*.local.json
+
+# ---- Python (ai-service/) ----
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+
+# ---- Data / models / vectors (not committed) ----
+data/uploads/
+chroma/
+*.gguf
+
+# ---- Secrets ----
+*.env
+.env.*
+!.env.example
