@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { api, type DocumentDto } from "../api";
-import { ROLE_NAMES } from "../auth";
-import { Badge, Button, Card, Select } from "../ui";
+import { api, type DocumentDto } from "../../api";
+import { ROLE_NAMES } from "../../auth";
+import { Badge, Button, Card, Select } from "../../ui";
 
 const STATUS: Record<number, { label: string; tone: "slate" | "amber" | "green" | "red" }> = {
   0: { label: "Uploaded", tone: "slate" },
@@ -10,9 +10,10 @@ const STATUS: Record<number, { label: string; tone: "slate" | "amber" | "green" 
   3: { label: "Failed", tone: "red" },
 };
 
-export function Documents() {
+export function Knowledge() {
   const [docs, setDocs] = useState<DocumentDto[]>([]);
   const [accessRole, setAccessRole] = useState(0);
+  const [fileName, setFileName] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -29,12 +30,16 @@ export function Documents() {
 
   async function onUpload() {
     const file = fileRef.current?.files?.[0];
-    if (!file) return;
+    if (!file) {
+      setError("Choose a file first.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       await api.uploadDocument(file, accessRole);
       if (fileRef.current) fileRef.current.value = "";
+      setFileName(null);
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
@@ -45,21 +50,30 @@ export function Documents() {
 
   return (
     <div className="space-y-5">
+      <h1 className="text-2xl font-semibold">Knowledge</h1>
+
       <Card>
         <h2 className="text-lg font-semibold">Upload a document</h2>
         <p className="mt-1 text-sm text-slate-500">
-          PDF, Word, Excel, or text. It will be indexed into the knowledge base and visible to
-          the selected role and above.
+          PDF, Word, Excel, or text. It is indexed into the knowledge base and visible to the
+          selected role and above.
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <input ref={fileRef} type="file" className="text-sm" accept=".pdf,.docx,.xlsx,.txt,.md,.csv" />
+          <input
+            ref={fileRef}
+            type="file"
+            className="text-sm"
+            accept=".pdf,.docx,.xlsx,.txt,.md,.csv"
+            onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+          />
           <Select value={accessRole} onChange={(e) => setAccessRole(Number(e.target.value))}>
             <option value={0}>Visible to: Employee+</option>
             <option value={1}>Visible to: Manager+</option>
             <option value={2}>Visible to: Admin only</option>
           </Select>
-          <Button onClick={onUpload} disabled={busy}>{busy ? "Uploading…" : "Upload"}</Button>
+          <Button onClick={onUpload} disabled={busy || !fileName}>{busy ? "Uploading…" : "Upload"}</Button>
         </div>
+        {fileName && <p className="mt-2 text-xs text-slate-500">Selected: {fileName}</p>}
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       </Card>
 

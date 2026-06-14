@@ -17,11 +17,17 @@ const EXAMPLES = [
   "Create an invoice for ACME: 10 hours consulting at 150 GEL",
 ];
 
-export function Assistant() {
+/**
+ * The AI assistant. By default it shows static example chips that fill the input.
+ * Pass `suggestions` (e.g. admin-curated FAQs) with `sendOnClick` to make the chips
+ * submit immediately.
+ */
+export function Assistant({ suggestions, sendOnClick = false }: { suggestions?: string[]; sendOnClick?: boolean }) {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<AgentResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const chips = suggestions ?? EXAMPLES;
 
   async function run(q: string) {
     if (!q.trim()) return;
@@ -52,17 +58,20 @@ export function Assistant() {
           placeholder="e.g. Summarize the remote work policy"
           className="mt-4 w-full rounded-md border border-slate-300 p-3 text-sm outline-none focus:border-slate-500"
         />
-        <div className="mt-3 flex flex-wrap gap-2">
-          {EXAMPLES.map((ex) => (
-            <button
-              key={ex}
-              onClick={() => setQuery(ex)}
-              className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
-            >
-              {ex}
-            </button>
-          ))}
-        </div>
+        {chips.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {chips.map((ex) => (
+              <button
+                key={ex}
+                onClick={() => (sendOnClick ? (setQuery(ex), run(ex)) : setQuery(ex))}
+                disabled={busy}
+                className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+        )}
         <div className="mt-4">
           <Button onClick={() => run(query)} disabled={busy}>{busy ? "Thinking…" : "Send"}</Button>
         </div>
