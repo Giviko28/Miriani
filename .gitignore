@@ -36,3 +36,6 @@ chroma/
 *.env
 .env.*
 !.env.example
+
+# ---- Playwright MCP scratch output ----
+.playwright-mcp/
