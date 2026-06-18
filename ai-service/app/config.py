@@ -12,6 +12,15 @@ class Settings(BaseSettings):
     embedding_model: str = "nomic-embed-text"
     request_timeout_seconds: float = 120.0
 
+    # Generation tuning. Ollama defaults num_ctx to 2048, which silently truncates RAG
+    # context + history for this 32k-capable model; we raise it so the model actually
+    # sees everything it's given. Temperature defaults are set per-call in the client:
+    # near-0 for routing/SQL/JSON (determinism), higher for drafting (fluency).
+    num_ctx: int = 8192
+    default_temperature: float = 0.3
+    top_p: float = 0.9
+    repeat_penalty: float = 1.1
+
     # Vector store (embedded, persistent ChromaDB)
     chroma_path: str = "./chroma_store"
     collection_name: str = "knowledge_base"

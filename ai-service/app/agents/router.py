@@ -10,15 +10,24 @@ from app.llm.client import generate
 _ROUTER_SYSTEM = (
     "You are a request router for a business automation system. "
     "Read the user's request and choose the single best handler. "
+    "Decide by the ACTION the user wants, not by surface keywords. Money or numbers in a "
+    "request do NOT mean invoice — invoice_gen is ONLY for literally creating an invoice/bill.\n\n"
     "Reply with ONLY one of these exact keys and nothing else:\n"
     "- greeting: greetings, introductions, small talk, asking who you are, or casual conversation\n"
     "- policy_qa: questions answered from company documents/policies\n"
     "- doc_summary: requests to summarize a document or content\n"
-    "- email_draft: requests to write/draft an email\n"
-    "- report_draft: requests to write/draft a report\n"
-    "- invoice_gen: requests to create/generate an invoice\n"
+    "- email_draft: requests to write/draft/compose a message to a person or customer\n"
+    "- report_draft: requests to write/draft a report, breakdown, analysis, or summary document\n"
+    "- invoice_gen: requests to create/generate/issue an invoice, bill, or receipt for a client\n"
     "- db_query: any question about live data — who is on leave, schedules, availability, "
-    "employee records, vacation dates, or anything that requires querying a database"
+    "employee records, vacation dates, or anything that requires querying a database\n\n"
+    "Examples:\n"
+    "Request: explain our refund terms to a customer -> email_draft\n"
+    "Request: give me a breakdown of Q3 expenses for the board -> report_draft\n"
+    "Request: create an invoice for Acme for 3 days of consulting -> invoice_gen\n"
+    "Request: what does our policy say about remote work? -> policy_qa\n"
+    "Request: who is off next week? -> db_query\n"
+    "Request: summarize this contract for me -> doc_summary"
 )
 
 _KEYWORD_HINTS = {
@@ -81,7 +90,9 @@ async def route(state: AgentState) -> AgentState:
             ) + "\n\n"
         raw = (await generate(
             f"{history_block}New message: {query}",
-            system=_ROUTER_SYSTEM
+            system=_ROUTER_SYSTEM,
+            temperature=0.0,
+            num_predict=16,
         )).strip().lower()
         choice = next((k for k in AGENT_KEYS if k in raw), "policy_qa")
 

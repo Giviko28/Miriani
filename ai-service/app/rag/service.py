@@ -76,5 +76,5 @@ async def answer(
         f"[Source {i + 1}: {c.file_name}]\n{c.text}" for i, c in enumerate(sources)
     )
     prompt = f"{_history_block(history)}Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
-    reply = await generate(prompt, system=_SYSTEM_PROMPT)
+    reply = await generate(prompt, system=_SYSTEM_PROMPT, temperature=0.2)
     return RagAnswer(answer=reply, sources=sources, used_context=True)
