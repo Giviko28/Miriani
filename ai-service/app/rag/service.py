@@ -47,8 +47,22 @@ def retrieve(*, org_id: str, role_level: int, query: str, top_k: int | None = No
     return vector_store.query(org_id=org_id, role_level=role_level, text=query, top_k=top_k)
 
 
-async def answer(*, org_id: str, role_level: int, query: str, top_k: int | None = None) -> RagAnswer:
-    """Retrieve role-scoped context and generate a grounded answer."""
+def _history_block(history: list[dict] | None) -> str:
+    if not history:
+        return ""
+    lines = [f"{m['sender'].capitalize()}: {m['content']}" for m in history]
+    return "Conversation so far:\n" + "\n".join(lines) + "\n\n"
+
+
+async def answer(
+    *, org_id: str, role_level: int, query: str, top_k: int | None = None,
+    history: list[dict] | None = None,
+) -> RagAnswer:
+    """Retrieve role-scoped context and generate a grounded answer.
+
+    Retrieval grounds on the current query only (so citations stay accurate); any prior
+    conversation turns are included in the prompt so follow-ups resolve in context.
+    """
     sources = retrieve(org_id=org_id, role_level=role_level, query=query, top_k=top_k)
 
     if not sources:
@@ -61,6 +75,6 @@ async def answer(*, org_id: str, role_level: int, query: str, top_k: int | None 
     context = "\n\n".join(
         f"[Source {i + 1}: {c.file_name}]\n{c.text}" for i, c in enumerate(sources)
     )
-    prompt = f"Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
+    prompt = f"{_history_block(history)}Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
     reply = await generate(prompt, system=_SYSTEM_PROMPT)
     return RagAnswer(answer=reply, sources=sources, used_context=True)

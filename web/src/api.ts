@@ -61,6 +61,28 @@ export type CreateUserResult = { user: UserDto; tempPassword: string };
 
 export type FaqDto = { id: string; question: string; sortOrder: number };
 
+export type ChatSessionSummary = { id: string; title: string; updatedAt: string };
+export type ChatMessage = {
+  id: string;
+  sender: "user" | "assistant";
+  content: string;
+  route: string | null;
+  usedContext: boolean;
+  sources: string | null; // JSON array string
+  structured: string | null; // JSON object string
+  createdAt: string;
+};
+export type ChatThread = { id: string; title: string; messages: ChatMessage[] };
+export type SendMessageResult = {
+  sessionId: string;
+  title: string;
+  answer: string;
+  route: string;
+  usedContext: boolean;
+  sources: string | null;
+  structured: string | null;
+};
+
 export type AuditEntry = {
   id: number;
   userId: string | null;
@@ -197,6 +219,15 @@ export const api = {
         body: JSON.stringify({ question, sortOrder }),
       }),
     remove: (id: string) => request<void>(`/api/faqs/${id}`, { method: "DELETE" }),
+  },
+
+  // --- chat history ---
+  chat: {
+    listSessions: () => request<ChatSessionSummary[]>("/api/chat/sessions"),
+    getSession: (id: string) => request<ChatThread>(`/api/chat/sessions/${id}`),
+    sendMessage: (sessionId: string | null, query: string) =>
+      request<SendMessageResult>("/api/chat/message", jsonBody({ sessionId, query })),
+    deleteSession: (id: string) => request<void>(`/api/chat/sessions/${id}`, { method: "DELETE" }),
   },
 
   // --- audit (admin) ---

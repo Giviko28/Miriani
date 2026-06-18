@@ -12,6 +12,7 @@ class AgentState(TypedDict, total=False):
     query: str
     org_id: str
     role_level: int
+    history: list[dict[str, str]]  # recent prior turns: {sender, content}
 
     # Router output
     route: str

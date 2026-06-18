@@ -35,7 +35,11 @@ def _build():
 agent_graph = _build()
 
 
-async def run_agents(*, org_id: str, role_level: int, query: str) -> AgentState:
+async def run_agents(
+    *, org_id: str, role_level: int, query: str, history: list[dict] | None = None
+) -> AgentState:
     """Run a request through the router and the chosen specialized agent."""
-    initial: AgentState = {"query": query, "org_id": org_id, "role_level": role_level}
+    initial: AgentState = {
+        "query": query, "org_id": org_id, "role_level": role_level, "history": history or [],
+    }
     return await agent_graph.ainvoke(initial)

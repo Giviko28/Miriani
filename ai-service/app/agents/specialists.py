@@ -31,10 +31,20 @@ def _retrieve(state: AgentState):
     )
 
 
+def _history_block(state: AgentState) -> str:
+    """Render recent conversation turns so the model can interpret follow-ups."""
+    history = state.get("history") or []
+    if not history:
+        return ""
+    lines = [f"{m['sender'].capitalize()}: {m['content']}" for m in history]
+    return "Conversation so far:\n" + "\n".join(lines) + "\n\n"
+
+
 async def policy_qa(state: AgentState) -> AgentState:
     """Answer a question grounded in role-scoped company documents."""
     result = await rag.answer(
-        org_id=state["org_id"], role_level=state.get("role_level", 0), query=state["query"]
+        org_id=state["org_id"], role_level=state.get("role_level", 0), query=state["query"],
+        history=state.get("history"),
     )
     return {
         "answer": result.answer,
@@ -53,6 +63,7 @@ async def doc_summary(state: AgentState) -> AgentState:
 
     context = "\n\n".join(s.text for s in sources)
     prompt = (
+        f"{_history_block(state)}"
         f"Summarize the following content into 3-5 concise bullet points.\n\n{context}"
     )
     reply = await generate(prompt, system="You are a precise business summarizer. Use only the given content.")
@@ -65,7 +76,8 @@ async def email_draft(state: AgentState) -> AgentState:
     context = "\n\n".join(s.text for s in sources)
     context_block = f"Relevant company context:\n{context}\n\n" if context else ""
     prompt = (
-        f"{context_block}Write a professional business email for this request:\n{state['query']}\n\n"
+        f"{_history_block(state)}{context_block}"
+        f"Write a professional business email for this request:\n{state['query']}\n\n"
         "Include a subject line. Keep it concise and courteous."
     )
     reply = await generate(prompt, system="You draft clear, professional business emails.")
@@ -78,7 +90,8 @@ async def report_draft(state: AgentState) -> AgentState:
     context = "\n\n".join(s.text for s in sources)
     context_block = f"Use this company context where relevant:\n{context}\n\n" if context else ""
     prompt = (
-        f"{context_block}Write a structured business report for this request:\n{state['query']}\n\n"
+        f"{_history_block(state)}{context_block}"
+        f"Write a structured business report for this request:\n{state['query']}\n\n"
         "Use clear headings (Summary, Details, Recommendations)."
     )
     reply = await generate(prompt, system="You write structured, factual business reports.")

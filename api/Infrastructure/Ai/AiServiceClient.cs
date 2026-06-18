@@ -46,13 +46,16 @@ public class AiServiceClient(HttpClient http) : IAiService
         return new AiAnswer(body.Answer, body.Used_Context, sources);
     }
 
-    public async Task<AiAgentAnswer> RunAgentAsync(Guid orgId, UserRole role, string query, CancellationToken ct = default)
+    public async Task<AiAgentAnswer> RunAgentAsync(
+        Guid orgId, UserRole role, string query,
+        IReadOnlyList<AiTurn>? history = null, CancellationToken ct = default)
     {
         var payload = new
         {
             org_id = orgId.ToString(),
             role_level = (int)role,
             query,
+            history = history?.Select(t => new { sender = t.Sender, content = t.Content }).ToList(),
         };
 
         var resp = await http.PostAsJsonAsync("/agent/run", payload, ct);
