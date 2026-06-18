@@ -85,7 +85,20 @@ public class DocumentService(
 
         await storage.DeleteAsync(doc.StoragePath, ct);
 
-        try { await ai.DeleteDocumentAsync(doc.Id, ct); }
+        try
+        {
+            await ai.DeleteDocumentAsync(doc.Id, ct);
+
+            // Self-heal: purge any vectors not backed by a live document for this org, so a
+            // missed delete (or legacy/seed data) can never keep leaking into answers.
+            var validIds = await db.Documents
+                .Where(d => d.OrgId == orgId)
+                .Select(d => d.Id)
+                .ToListAsync(ct);
+            var removed = await ai.ReconcileDocumentsAsync(orgId, validIds, ct);
+            if (removed.Count > 0)
+                logger.LogInformation("Reconcile purged {Count} orphaned doc(s) for org {OrgId}", removed.Count, orgId);
+        }
         catch (Exception ex) { logger.LogWarning(ex, "Failed to remove doc {DocId} from vector store", id); }
 
         await audit.LogAsync(orgId, currentUser.UserId, "document.delete", doc.FileName, ct);

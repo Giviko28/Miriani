@@ -98,6 +98,21 @@ public class AiServiceClient(HttpClient http) : IAiService
         resp.EnsureSuccessStatusCode();
     }
 
+    public async Task<IReadOnlyList<string>> ReconcileDocumentsAsync(
+        Guid orgId, IReadOnlyCollection<Guid> validDocIds, CancellationToken ct = default)
+    {
+        var payload = new
+        {
+            org_id = orgId.ToString(),
+            valid_doc_ids = validDocIds.Select(d => d.ToString()).ToList(),
+        };
+        var resp = await http.PostAsJsonAsync("/ingest/reconcile", payload, ct);
+        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadFromJsonAsync<ReconcileBody>(ct);
+        return body?.Removed ?? [];
+    }
+
+    private record ReconcileBody(List<string> Removed);
     private record IngestBody(string Doc_Id, int Chunks);
     private record DbSchemaBody(string Org_Id, List<object> Tables);
     private record DbExploreBody(string Org_Id, string Summary, int Tables_Explored);

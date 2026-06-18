@@ -48,4 +48,11 @@ public interface IAiService
 
     /// <summary>Delete all vector chunks belonging to a document from the AI service.</summary>
     Task DeleteDocumentAsync(Guid docId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Purge orphaned vectors: tell the AI service the authoritative set of document ids for an
+    /// org so it can delete any chunks left behind by documents no longer in the system of record.
+    /// </summary>
+    Task<IReadOnlyList<string>> ReconcileDocumentsAsync(
+        Guid orgId, IReadOnlyCollection<Guid> validDocIds, CancellationToken ct = default);
 }

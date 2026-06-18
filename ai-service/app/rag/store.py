@@ -58,6 +58,26 @@ class VectorStore:
     def delete_document(self, doc_id: str) -> None:
         self._collection.delete(where={"doc_id": {"$eq": doc_id}})
 
+    def list_doc_ids(self, org_id: str) -> set[str]:
+        """Return the distinct doc_ids currently stored for an org."""
+        data = self._collection.get(where={"org_id": {"$eq": org_id}}, include=["metadatas"])
+        return {str(m.get("doc_id", "")) for m in (data.get("metadatas") or [])}
+
+    def reconcile(self, org_id: str, valid_doc_ids: set[str]) -> list[str]:
+        """Delete any of the org's chunks whose doc_id is not in the authoritative set.
+
+        Removes orphaned vectors left behind when a document was deleted from the system
+        of record but its embeddings were never purged. Returns the doc_ids removed.
+        """
+        stored = self.list_doc_ids(org_id)
+        orphans = [d for d in stored if d and d not in valid_doc_ids]
+        for doc_id in orphans:
+            self._collection.delete(where={"$and": [
+                {"org_id": {"$eq": org_id}},
+                {"doc_id": {"$eq": doc_id}},
+            ]})
+        return orphans
+
     def query(self, *, org_id: str, role_level: int, text: str, top_k: int | None = None) -> list[RetrievedChunk]:
         """Return the most relevant chunks the caller is allowed to see.
 
