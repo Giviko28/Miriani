@@ -20,13 +20,16 @@ _ROUTER_SYSTEM = (
     "- report_draft: requests to write/draft a report, breakdown, analysis, or summary document\n"
     "- invoice_gen: requests to create/generate/issue an invoice, bill, or receipt for a client\n"
     "- db_query: any question about live data — who is on leave, schedules, availability, "
-    "employee records, vacation dates, or anything that requires querying a database\n\n"
+    "employee records, vacation dates, or anything that requires querying a database\n"
+    "- ticket_triage: reporting an IT or support problem to be fixed (something broken, not "
+    "working, an outage, or a request for access/equipment)\n\n"
     "Examples:\n"
     "Request: explain our refund terms to a customer -> email_draft\n"
     "Request: give me a breakdown of Q3 expenses for the board -> report_draft\n"
     "Request: create an invoice for Acme for 3 days of consulting -> invoice_gen\n"
     "Request: what does our policy say about remote work? -> policy_qa\n"
     "Request: who is off next week? -> db_query\n"
+    "Request: my laptop won't connect to the VPN, it's urgent -> ticket_triage\n"
     "Request: summarize this contract for me -> doc_summary"
 )
 
@@ -44,6 +47,10 @@ _KEYWORD_HINTS = {
                        "joining", "first day", "checklist for"),
     "contract_scan": ("contract", "vendor", "agreement", "risk", "scan contract",
                       "review contract", "check contract", "risky clause"),
+    "ticket_triage": ("not working", "won't connect", "wont connect", "can't access", "cant access",
+                      "broken", "is down", "outage", "error message", "blue screen", "won't turn on",
+                      "reset my password", "need access to", "laptop won't", "vpn", "raise a ticket",
+                      "open a ticket", "log a ticket", "it support", "help desk", "helpdesk"),
     "db_query": ("who is on leave", "who is off", "who has leave", "who is on vacation",
                  "vacation schedule", "leave schedule", "show me vacation", "show me leave",
                  "check availability", "is available", "is free", "any conflicts",

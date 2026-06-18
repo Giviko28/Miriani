@@ -25,6 +25,18 @@ services:
     volumes:
       - chroma-data:/data
 
+  # Local SMTP sink for the email-driven business processes. Mailpit accepts any mail on
+  # :1025 and shows it in a web inbox at http://localhost:8025 — so live demos can prove an
+  # email/invoice/approval actually "sent" without touching a real provider.
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: bpa-mailpit
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web inbox
+    environment:
+      MP_MAX_MESSAGES: "500"
+
 volumes:
   mssql-data:
   chroma-data:
