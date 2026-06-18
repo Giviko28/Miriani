@@ -37,6 +37,19 @@ public class OrgDbConfigService(AppDbContext db, IAiService ai) : IOrgDbConfigSe
         return new OrgDbStatusDto(true, config.DbType, config.SchemaJson, config.UpdatedAt);
     }
 
+    public async Task<string> ExploreAsync(Guid orgId, CancellationToken ct = default)
+    {
+        var summary = await ai.ExploreDbAsync(orgId, ct);
+        var config = await db.OrgDbConfigs.FirstOrDefaultAsync(x => x.OrgId == orgId, ct);
+        if (config is not null)
+        {
+            config.SchemaJson = summary;
+            config.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
+        }
+        return summary;
+    }
+
     public async Task DisconnectAsync(Guid orgId, CancellationToken ct = default)
     {
         var config = await db.OrgDbConfigs.FirstOrDefaultAsync(x => x.OrgId == orgId, ct);

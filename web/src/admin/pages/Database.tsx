@@ -22,6 +22,7 @@ export function Database() {
   const [dbType, setDbType] = useState("sqlite");
   const [connStr, setConnStr] = useState("");
   const [saving, setSaving] = useState(false);
+  const [exploring, setExploring] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -46,6 +47,21 @@ export function Database() {
       setError(err.message ?? "Failed to connect.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleExplore() {
+    setExploring(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const result = await api.orgDb.explore();
+      setStatus(s => s ? { ...s, schemaJson: result.summary } : s);
+      setSuccess("Database explored and memorized. Mirian will use this context in every query.");
+    } catch (err: any) {
+      setError(err.message ?? "Exploration failed.");
+    } finally {
+      setExploring(false);
     }
   }
 
@@ -80,20 +96,32 @@ export function Database() {
 
       {/* Status banner */}
       {status?.connected && (
-        <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 px-4 py-3">
-          <div className="text-sm">
-            <span className="font-medium text-green-800">Connected</span>
-            <span className="ml-2 text-green-600">{status.dbType}</span>
-            {status.updatedAt && (
-              <span className="ml-2 text-green-500">· last updated {new Date(status.updatedAt).toLocaleString()}</span>
-            )}
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              <span className="font-medium text-green-800">Connected</span>
+              <span className="ml-2 text-green-600">{status.dbType}</span>
+              {status.updatedAt && (
+                <span className="ml-2 text-green-500">· last updated {new Date(status.updatedAt).toLocaleString()}</span>
+              )}
+            </div>
+            <button onClick={handleDisconnect} className="text-xs font-medium text-red-600 hover:text-red-800">
+              Disconnect
+            </button>
           </div>
           <button
-            onClick={handleDisconnect}
-            className="text-xs font-medium text-red-600 hover:text-red-800"
+            onClick={handleExplore}
+            disabled={exploring}
+            className="rounded-md bg-green-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-green-800 disabled:opacity-50"
           >
-            Disconnect
+            {exploring ? "Exploring…" : "Explore & Memorize"}
           </button>
+          {status.schemaJson && status.schemaJson.length > 50 && (
+            <details className="rounded-md border border-green-200 bg-white">
+              <summary className="cursor-pointer px-3 py-1.5 text-xs font-medium text-green-700">Memorized Description</summary>
+              <p className="whitespace-pre-wrap px-3 pb-3 pt-1 text-xs text-slate-600">{status.schemaJson}</p>
+            </details>
+          )}
         </div>
       )}
 

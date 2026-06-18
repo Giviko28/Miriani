@@ -16,7 +16,9 @@ _ROUTER_SYSTEM = (
     "- doc_summary: requests to summarize a document or content\n"
     "- email_draft: requests to write/draft an email\n"
     "- report_draft: requests to write/draft a report\n"
-    "- invoice_gen: requests to create/generate an invoice"
+    "- invoice_gen: requests to create/generate an invoice\n"
+    "- db_query: any question about live data — who is on leave, schedules, availability, "
+    "employee records, vacation dates, or anything that requires querying a database"
 )
 
 _KEYWORD_HINTS = {
@@ -35,10 +37,6 @@ _KEYWORD_HINTS = {
     "db_query": ("who is on leave", "who is off", "check availability", "is available",
                  "query the database", "from the database", "from the system",
                  "show me scheduled", "scheduled leave", "schedule conflict"),
-    "db_explore": ("explore db", "explore the db", "explore database", "explore the database",
-                   "describe the db", "describe the database", "describe db",
-                   "learn the database", "scan the database", "what tables", "what's in the db",
-                   "what is in the db", "index the db", "memorize the db", "remember the db"),
 }
 
 

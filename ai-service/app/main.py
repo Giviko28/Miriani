@@ -187,6 +187,49 @@ def db_disconnect(org_id: str) -> None:
     schema_cache.delete(org_id)
 
 
+class DbExploreResponse(BaseModel):
+    org_id: str
+    summary: str
+    tables_explored: int
+
+
+@app.post("/db/explore/{org_id}", response_model=DbExploreResponse)
+async def db_explore(org_id: str) -> DbExploreResponse:
+    """Sample every table, generate a natural-language description, and cache it."""
+    import json as _json
+    from app.llm.client import generate
+
+    cached = schema_cache.load(org_id)
+    if cached is None:
+        raise HTTPException(status_code=404, detail="No database connected for this org.")
+
+    conn_str = cached["connection_string"]
+    tables = cached["schema"].get("tables", [])
+
+    samples: list[str] = []
+    for table in tables:
+        try:
+            rows = db_connector.execute_select(conn_str, f"SELECT * FROM \"{table['name']}\" LIMIT 5")
+            rows_text = _json.dumps(rows, default=str)
+        except Exception:
+            rows_text = "(could not read)"
+        col_list = ", ".join(f"{c['name']} ({c['type']})" for c in table["columns"])
+        samples.append(f"Table: {table['name']}\nColumns: {col_list}\nSample rows: {rows_text}")
+
+    prompt = (
+        "You have been given a database with the following tables and sample data:\n\n"
+        + "\n\n".join(samples)
+        + "\n\nWrite a clear, concise description of this database — what it stores, what each table "
+        "represents, the key columns, and any notable data patterns visible in the samples. "
+        "This description will be used as permanent context for an AI assistant. "
+        "Write one cohesive paragraph per table."
+    )
+    summary = await generate(prompt, system="You write precise, factual database descriptions.")
+    schema_cache.save_summary(org_id, summary)
+
+    return DbExploreResponse(org_id=org_id, summary=summary, tables_explored=len(tables))
+
+
 # ---------- Agents ----------
 
 class AgentTurn(BaseModel):
