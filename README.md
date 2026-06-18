@@ -7,7 +7,7 @@ ERP-like web application that automates knowledge-based business processes using
 > Caucasus University · School of Technology (CST) · 2026
 > Author: Givi Chelidze · Supervisor: Maksim Iavich
 
-See [`CLAUDE.md`](./CLAUDE.md) for the goal, decisions, and architecture, and
+See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the goal, decisions, and architecture, and
 [`Bachelors.docx`](./Bachelors.docx) for the full proposal.
 
 ## Architecture
@@ -42,5 +42,4 @@ React SPA ──JWT──▶ .NET 10 API ──▶ MS SQL Server
 
 ## Status
 
-Early scaffolding (Milestone 1 — architecture). Build sequence follows the proposal's
-14-week milestone plan; see `CLAUDE.md`.
+Feature-complete MVP. Build sequence follows the proposal's 14-week milestone plan; see `docs/ARCHITECTURE.md`.
