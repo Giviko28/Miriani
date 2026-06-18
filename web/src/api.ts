@@ -1,19 +1,25 @@
-// Thin client for the .NET API. All calls go through the gateway on :5080; the JWT is
-// attached automatically. The frontend never talks to the Python AI service directly.
+// Thin client for the .NET API. All calls go through the gateway on :5080; the access token
+// is attached automatically and silently refreshed when it expires. The frontend never talks
+// to the Python AI service directly.
 
 const API_BASE = "http://localhost:5080";
-const TOKEN_KEY = "bpa_token";
+const ACCESS_KEY = "bpa_access";
+const REFRESH_KEY = "bpa_refresh";
 
 export type Role = "Employee" | "Manager" | "Admin";
 export const ROLE_LEVEL: Record<Role, number> = { Employee: 0, Manager: 1, Admin: 2 };
 
 export type AuthResult = {
   token: string;
+  refreshToken: string;
   email: string;
   displayName: string;
   role: number;
+  mustChangePassword: boolean;
   expiresAt: string;
 };
+
+type TokenPair = { token: string; refreshToken: string; expiresAt: string };
 
 export type DocumentDto = {
   id: string;
@@ -41,18 +47,90 @@ export type AgentResult = {
   structured: Record<string, unknown> | null;
 };
 
-export const tokenStore = {
-  get: () => localStorage.getItem(TOKEN_KEY),
-  set: (t: string) => localStorage.setItem(TOKEN_KEY, t),
-  clear: () => localStorage.removeItem(TOKEN_KEY),
+export type UserDto = {
+  id: string;
+  email: string;
+  displayName: string;
+  role: number;
+  isActive: boolean;
+  mustChangePassword: boolean;
+  createdAt: string;
 };
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const token = tokenStore.get();
-  const headers = new Headers(options.headers);
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+export type CreateUserResult = { user: UserDto; tempPassword: string };
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+export type FaqDto = { id: string; question: string; sortOrder: number };
+
+export type AuditEntry = {
+  id: number;
+  userId: string | null;
+  action: string;
+  detail: string | null;
+  createdAt: string;
+};
+
+export const tokenStore = {
+  access: () => localStorage.getItem(ACCESS_KEY),
+  refresh: () => localStorage.getItem(REFRESH_KEY),
+  set: (access: string, refresh: string) => {
+    localStorage.setItem(ACCESS_KEY, access);
+    localStorage.setItem(REFRESH_KEY, refresh);
+  },
+  clear: () => {
+    localStorage.removeItem(ACCESS_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+  },
+};
+
+// Single in-flight refresh shared across concurrent 401s, so we never refresh-storm.
+let refreshing: Promise<boolean> | null = null;
+
+function tryRefresh(): Promise<boolean> {
+  const refresh = tokenStore.refresh();
+  if (!refresh) return Promise.resolve(false);
+  if (!refreshing) {
+    refreshing = (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: refresh }),
+        });
+        if (!res.ok) return false;
+        const pair = (await res.json()) as TokenPair;
+        tokenStore.set(pair.token, pair.refreshToken);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        setTimeout(() => (refreshing = null), 0);
+      }
+    })();
+  }
+  return refreshing;
+}
+
+async function rawRequest(path: string, options: RequestInit): Promise<Response> {
+  const headers = new Headers(options.headers);
+  const token = tokenStore.access();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  return fetch(`${API_BASE}${path}`, { ...options, headers });
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  let res = await rawRequest(path, options);
+
+  // Access token expired: refresh once and retry.
+  if (res.status === 401 && tokenStore.refresh()) {
+    const ok = await tryRefresh();
+    if (ok) {
+      res = await rawRequest(path, options);
+    } else {
+      tokenStore.clear();
+      window.dispatchEvent(new Event("bpa:signout"));
+    }
+  }
+
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
     try {
@@ -72,14 +150,15 @@ function jsonBody(data: unknown): RequestInit {
 }
 
 export const api = {
-  register: (email: string, password: string, displayName: string, role: number) =>
-    request<AuthResult>("/api/auth/register", jsonBody({ email, password, displayName, role })),
-
+  // --- auth ---
   login: (email: string, password: string) =>
     request<AuthResult>("/api/auth/login", jsonBody({ email, password })),
+  logout: (refreshToken: string) => request<void>("/api/auth/logout", jsonBody({ refreshToken })),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>("/api/auth/change-password", jsonBody({ currentPassword, newPassword })),
 
+  // --- documents (admin) ---
   listDocuments: () => request<DocumentDto[]>("/api/documents"),
-
   uploadDocument: (file: File, accessRole: number) => {
     const form = new FormData();
     form.append("file", file);
@@ -87,15 +166,39 @@ export const api = {
     return request<DocumentDto>("/api/documents", { method: "POST", body: form });
   },
 
+  // --- AI ---
   runAgent: (query: string) => request<AgentResult>("/api/ai/agent", jsonBody({ query })),
 
-  listAudit: () => request<AuditEntry[]>("/api/audit?take=100"),
-};
+  // --- users (admin) ---
+  users: {
+    list: () => request<UserDto[]>("/api/users"),
+    create: (email: string, displayName: string, role: number) =>
+      request<CreateUserResult>("/api/users", jsonBody({ email, displayName, role })),
+    resetPassword: (id: string) =>
+      request<{ tempPassword: string }>(`/api/users/${id}/reset-password`, { method: "POST" }),
+    update: (id: string, patch: { role?: number; isActive?: boolean }) =>
+      request<UserDto>(`/api/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      }),
+    remove: (id: string) => request<void>(`/api/users/${id}`, { method: "DELETE" }),
+  },
 
-export type AuditEntry = {
-  id: number;
-  userId: string | null;
-  action: string;
-  detail: string | null;
-  createdAt: string;
+  // --- FAQs ---
+  faqs: {
+    list: () => request<FaqDto[]>("/api/faqs"),
+    create: (question: string, sortOrder: number) =>
+      request<FaqDto>("/api/faqs", jsonBody({ question, sortOrder })),
+    update: (id: string, question: string, sortOrder: number) =>
+      request<FaqDto>(`/api/faqs/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, sortOrder }),
+      }),
+    remove: (id: string) => request<void>(`/api/faqs/${id}`, { method: "DELETE" }),
+  },
+
+  // --- audit (admin) ---
+  listAudit: () => request<AuditEntry[]>("/api/audit?take=100"),
 };

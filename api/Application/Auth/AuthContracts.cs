@@ -2,17 +2,35 @@ using Domain.Enums;
 
 namespace Application.Auth;
 
-public record RegisterRequest(string Email, string Password, string DisplayName, UserRole Role);
-
 public record LoginRequest(string Email, string Password);
 
-public record AuthResponse(string Token, string Email, string DisplayName, UserRole Role, DateTime ExpiresAt);
+public record RefreshRequest(string RefreshToken);
 
-/// <summary>Registers and authenticates users, issuing JWTs on success.</summary>
+public record LogoutRequest(string RefreshToken);
+
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
+public record AuthResponse(
+    string Token,
+    string RefreshToken,
+    string Email,
+    string DisplayName,
+    UserRole Role,
+    bool MustChangePassword,
+    DateTime ExpiresAt);
+
+/// <summary>A freshly rotated token pair (access + refresh) and the access-token expiry.</summary>
+public record TokenPair(string Token, string RefreshToken, DateTime ExpiresAt);
+
+/// <summary>Authenticates users and manages access/refresh tokens.</summary>
 public interface IAuthService
 {
-    Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken ct = default);
     Task<AuthResponse?> LoginAsync(LoginRequest request, CancellationToken ct = default);
+    Task<TokenPair?> RefreshAsync(string rawRefreshToken, CancellationToken ct = default);
+    Task LogoutAsync(string rawRefreshToken, CancellationToken ct = default);
+
+    /// <summary>Returns false when the current password is wrong.</summary>
+    Task<bool> ChangePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken ct = default);
 }
 
 /// <summary>Issues signed JWTs carrying the user's identity, org, and role claims.</summary>
