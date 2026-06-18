@@ -333,9 +333,20 @@ async def db_query(state: AgentState) -> AgentState:
     saved_summary = cached.get("summary", "")
     schema_text = db_connector.render_schema(schema)
 
+    # Tell the LLM which dialect to use so it picks the right date functions.
+    if conn_str.startswith("sqlite"):
+        dialect_hint = "Database type: SQLite. Use date('now') for today, NOT CURDATE() or NOW(). Use strftime() for date formatting."
+    elif conn_str.startswith("postgresql"):
+        dialect_hint = "Database type: PostgreSQL. Use CURRENT_DATE for today."
+    elif conn_str.startswith("mysql"):
+        dialect_hint = "Database type: MySQL. Use CURDATE() for today."
+    else:
+        dialect_hint = "Database type: SQL Server. Use GETDATE() for today."
+
     context_block = f"Database description:\n{saved_summary}\n\n" if saved_summary else ""
     sql_prompt = (
         f"{context_block}"
+        f"{dialect_hint}\n"
         f"Database schema:\n{schema_text}\n\n"
         f"Question: {state['query']}\n\n"
         "Write a single valid SELECT SQL query to answer this question. "
@@ -343,11 +354,19 @@ async def db_query(state: AgentState) -> AgentState:
     )
     sql = (await generate(sql_prompt, system="You output only a valid SQL SELECT statement, nothing else.")).strip().rstrip(";")
 
+    # Auto-correct common cross-dialect function mistakes before executing.
+    if conn_str.startswith("sqlite"):
+        import re as _re
+        sql = _re.sub(r'\bCURDATE\(\)', "date('now')", sql, flags=_re.IGNORECASE)
+        sql = _re.sub(r'\bNOW\(\)', "datetime('now')", sql, flags=_re.IGNORECASE)
+        sql = _re.sub(r'\bGETDATE\(\)', "datetime('now')", sql, flags=_re.IGNORECASE)
+        sql = _re.sub(r'\bCURRENT_TIMESTAMP\b', "datetime('now')", sql, flags=_re.IGNORECASE)
+
     try:
         rows = db_connector.execute_select(conn_str, sql)
     except Exception as exc:
         return {
-            "answer": f"I generated a query but it failed to execute: {exc}",
+            "answer": f"I couldn't retrieve that information from the database. The query failed: {exc}",
             "used_context": False, "sources": [],
             "structured": {"sql": sql, "error": str(exc), "rows": [], "total_rows": 0},
         }
