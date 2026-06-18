@@ -14,6 +14,8 @@ class AgentState(TypedDict, total=False):
     org_id: str
     role_level: int
     history: list[dict[str, str]]  # recent prior turns: {sender, content}
+    attachment_text: str | None  # ephemeral file text for THIS message only (never stored)
+    attachment_name: str | None
 
     # Router output
     route: str

@@ -19,7 +19,7 @@ from app.agents.graph import run_agents
 from app.config import settings
 from app.db import connector as db_connector
 from app.db import schema_cache
-from app.ingestion.extract import UnsupportedFileType
+from app.ingestion.extract import UnsupportedFileType, extract_text
 from app.rag import service as rag
 from app.rag.store import vector_store
 
@@ -63,6 +63,37 @@ async def ping_llm(req: PingRequest) -> PingResponse:
 
 
 # ---------- RAG ----------
+
+# Hard cap on ephemeral attachment text so a huge file can't blow past the model's
+# context window. ~16k chars ≈ 4k tokens, well within num_ctx.
+_ATTACHMENT_CHAR_LIMIT = 16000
+
+
+class ExtractResponse(BaseModel):
+    file_name: str
+    text: str
+    chars: int
+    truncated: bool
+
+
+@app.post("/extract", response_model=ExtractResponse)
+async def extract(file: UploadFile) -> ExtractResponse:
+    """Extract plain text from an uploaded file WITHOUT storing it anywhere.
+
+    Used for temporary chat attachments: the text is returned to the caller and used as
+    one-shot context for a single message. Nothing is embedded or persisted (unlike /ingest).
+    """
+    data = await file.read()
+    try:
+        text = extract_text(file.filename or "upload", data)
+    except UnsupportedFileType as exc:
+        raise HTTPException(status_code=415, detail=str(exc)) from exc
+
+    truncated = len(text) > _ATTACHMENT_CHAR_LIMIT
+    if truncated:
+        text = text[:_ATTACHMENT_CHAR_LIMIT]
+    return ExtractResponse(file_name=file.filename or "upload", text=text, chars=len(text), truncated=truncated)
+
 
 class IngestResponse(BaseModel):
     doc_id: str
@@ -271,6 +302,9 @@ class AgentRequest(BaseModel):
     role_level: int = 0
     query: str
     history: list[AgentTurn] | None = None
+    # Ephemeral file attached to THIS message only — extracted text, never stored/embedded.
+    attachment_text: str | None = None
+    attachment_name: str | None = None
 
 
 class AgentResponse(BaseModel):
@@ -286,7 +320,8 @@ async def agent_run(req: AgentRequest) -> AgentResponse:
     """Route the request to the right specialized agent and return its result."""
     history = [t.model_dump() for t in req.history] if req.history else None
     state = await run_agents(
-        org_id=req.org_id, role_level=req.role_level, query=req.query, history=history
+        org_id=req.org_id, role_level=req.role_level, query=req.query, history=history,
+        attachment_text=req.attachment_text, attachment_name=req.attachment_name,
     )
     sources = [SourceDto(**s) for s in state.get("sources", [])]
     return AgentResponse(

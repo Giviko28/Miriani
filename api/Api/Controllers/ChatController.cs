@@ -1,3 +1,4 @@
+using Application.Ai;
 using Application.Chat;
 using Application.Common;
 using Microsoft.AspNetCore.Authorization;
@@ -8,8 +9,37 @@ namespace Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/chat")]
-public class ChatController(IChatService chat, ICurrentUser currentUser) : ControllerBase
+public class ChatController(IChatService chat, IAiService ai, ICurrentUser currentUser) : ControllerBase
 {
+    private const long MaxAttachmentBytes = 10 * 1024 * 1024; // 10 MB
+
+    /// <summary>
+    /// Extract text from a file to attach to a single chat message. The file is NOT stored or
+    /// embedded — unlike the Knowledge base, a chat attachment is temporary, used only as
+    /// one-shot context for the next message the user sends.
+    /// </summary>
+    [HttpPost("extract")]
+    [RequestSizeLimit(MaxAttachmentBytes)]
+    public async Task<IActionResult> Extract(IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { error = "No file provided." });
+        if (file.Length > MaxAttachmentBytes)
+            return BadRequest(new { error = "File is too large (max 10 MB)." });
+
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        try
+        {
+            var result = await ai.ExtractAttachmentAsync(file.FileName, ms.ToArray(), ct);
+            return Ok(result);
+        }
+        catch (HttpRequestException ex)
+        {
+            // The AI service returns 415 for unsupported types; surface a clean message.
+            return BadRequest(new { error = $"Couldn't read that file: {ex.Message}" });
+        }
+    }
     /// <summary>List the caller's chat sessions, newest first.</summary>
     [HttpGet("sessions")]
     public async Task<IActionResult> ListSessions(CancellationToken ct)

@@ -73,6 +73,8 @@ export type ChatMessage = {
   createdAt: string;
 };
 export type ChatThread = { id: string; title: string; messages: ChatMessage[] };
+// A temporary file attached to one message — extracted text only, never stored server-side.
+export type ChatAttachment = { fileName: string; text: string; chars: number; truncated: boolean };
 export type SendMessageResult = {
   sessionId: string;
   title: string;
@@ -230,8 +232,18 @@ export const api = {
   chat: {
     listSessions: () => request<ChatSessionSummary[]>("/api/chat/sessions"),
     getSession: (id: string) => request<ChatThread>(`/api/chat/sessions/${id}`),
-    sendMessage: (sessionId: string | null, query: string) =>
-      request<SendMessageResult>("/api/chat/message", jsonBody({ sessionId, query })),
+    sendMessage: (sessionId: string | null, query: string, attachment?: ChatAttachment | null) =>
+      request<SendMessageResult>("/api/chat/message", jsonBody({
+        sessionId, query,
+        attachmentText: attachment?.text ?? null,
+        attachmentName: attachment?.fileName ?? null,
+      })),
+    // Extract text from a file to attach to ONE message (temporary — never stored/embedded).
+    extractAttachment: (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return request<ChatAttachment>("/api/chat/extract", { method: "POST", body: form });
+    },
     deleteSession: (id: string) => request<void>(`/api/chat/sessions/${id}`, { method: "DELETE" }),
   },
 

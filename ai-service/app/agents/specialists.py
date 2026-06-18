@@ -51,6 +51,19 @@ def _history_block(state: AgentState) -> str:
     return "Conversation so far:\n" + "\n".join(lines) + "\n\n"
 
 
+def _attachment_text(state: AgentState) -> str:
+    return (state.get("attachment_text") or "").strip()
+
+
+def _attachment_block(state: AgentState) -> str:
+    """Render the ephemeral attached file (this message only) as prompt context."""
+    att = _attachment_text(state)
+    if not att:
+        return ""
+    name = state.get("attachment_name") or "attached file"
+    return f"Attached file for THIS message only — '{name}':\n{att}\n\n"
+
+
 async def greeting(state: AgentState) -> AgentState:
     """Respond to greetings, introductions, and casual conversation as Miriani."""
     prompt = (
@@ -78,6 +91,7 @@ async def policy_qa(state: AgentState) -> AgentState:
     result = await rag.answer(
         org_id=state["org_id"], role_level=state.get("role_level", 0), query=state["query"],
         history=state.get("history"),
+        attachment_text=state.get("attachment_text"), attachment_name=state.get("attachment_name"),
     )
     return {
         "answer": result.answer,
@@ -88,13 +102,14 @@ async def policy_qa(state: AgentState) -> AgentState:
 
 
 async def doc_summary(state: AgentState) -> AgentState:
-    """Summarize the most relevant company content for the request."""
+    """Summarize the most relevant company content (or an attached file) for the request."""
+    att = _attachment_text(state)
     sources = _retrieve(state)
-    if not sources:
+    if not sources and not att:
         return {"answer": "I couldn't find any matching documents to summarize.",
                 "used_context": False, "sources": [], "structured": None}
 
-    context = "\n\n".join(s.text for s in sources)
+    context = (_attachment_block(state) + "\n\n".join(s.text for s in sources)).strip()
     prompt = (
         f"{_history_block(state)}"
         f"Summarize the following content into 3-5 concise bullet points.\n\n{context}"
@@ -109,7 +124,7 @@ async def email_draft(state: AgentState) -> AgentState:
     context = "\n\n".join(s.text for s in sources)
     context_block = f"Relevant company context:\n{context}\n\n" if context else ""
     prompt = (
-        f"{_history_block(state)}{context_block}"
+        f"{_history_block(state)}{_attachment_block(state)}{context_block}"
         f"Write a professional business email for this request:\n{state['query']}\n\n"
         "Include a subject line. Keep it concise and courteous."
     )
@@ -123,7 +138,7 @@ async def report_draft(state: AgentState) -> AgentState:
     context = "\n\n".join(s.text for s in sources)
     context_block = f"Use this company context where relevant:\n{context}\n\n" if context else ""
     prompt = (
-        f"{_history_block(state)}{context_block}"
+        f"{_history_block(state)}{_attachment_block(state)}{context_block}"
         f"Write a structured business report for this request:\n{state['query']}\n\n"
         "Use clear headings (Summary, Details, Recommendations)."
     )
@@ -134,6 +149,7 @@ async def report_draft(state: AgentState) -> AgentState:
 async def invoice_gen(state: AgentState) -> AgentState:
     """Produce a structured invoice (JSON) from the details in the request."""
     prompt = (
+        f"{_attachment_block(state)}"
         "Extract invoice details from the request and return ONLY a JSON object with keys: "
         "client (string), items (array of {description, quantity, unit_price}), "
         "currency (string), notes (string). Compute nothing; just extract. "
@@ -191,7 +207,7 @@ async def leave_request(state: AgentState) -> AgentState:
     context_block = f"Company leave policy:\n{context}\n\n" if context else ""
     db_block = _db_vacation_context(state["org_id"], state["query"])
     prompt = (
-        f"{_history_block(state)}{context_block}"
+        f"{_history_block(state)}{_attachment_block(state)}{context_block}"
         f"{db_block}"
         f"Employee leave request: {state['query']}\n\n"
         "Extract the request details and assess eligibility against any policy provided. "
@@ -222,7 +238,7 @@ async def onboarding_gen(state: AgentState) -> AgentState:
     context = "\n\n".join(s.text for s in sources)
     context_block = f"Company policies and procedures:\n{context}\n\n" if context else ""
     prompt = (
-        f"{_history_block(state)}{context_block}"
+        f"{_history_block(state)}{_attachment_block(state)}{context_block}"
         f"Onboarding request: {state['query']}\n\n"
         "Generate a structured onboarding plan. "
         "Return ONLY a JSON object with keys: "
@@ -252,7 +268,7 @@ async def contract_scan(state: AgentState) -> AgentState:
     context = "\n\n".join(s.text for s in sources)
     context_block = f"Available company documents (policies and/or contract content):\n{context}\n\n" if context else ""
     prompt = (
-        f"{_history_block(state)}{context_block}"
+        f"{_history_block(state)}{_attachment_block(state)}{context_block}"
         f"Contract scan request: {state['query']}\n\n"
         "Analyze the documents for contractual risks relative to company policy. "
         "Return ONLY a JSON object with keys: "
@@ -478,7 +494,7 @@ async def ticket_triage(state: AgentState) -> AgentState:
     context = "\n\n".join(s.text for s in sources)
     context_block = f"Relevant internal knowledge (use to suggest a resolution):\n{context}\n\n" if context else ""
     prompt = (
-        f"{_history_block(state)}{context_block}"
+        f"{_history_block(state)}{_attachment_block(state)}{context_block}"
         f"Support/IT request: {state['query']}\n\n"
         "Triage this into a support ticket. "
         "Return ONLY a JSON object with keys: "

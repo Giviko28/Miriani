@@ -61,24 +61,31 @@ def _history_block(history: list[dict] | None) -> str:
 async def answer(
     *, org_id: str, role_level: int, query: str, top_k: int | None = None,
     history: list[dict] | None = None,
+    attachment_text: str | None = None, attachment_name: str | None = None,
 ) -> RagAnswer:
     """Retrieve role-scoped context and generate a grounded answer.
 
     Retrieval grounds on the current query only (so citations stay accurate); any prior
-    conversation turns are included in the prompt so follow-ups resolve in context.
+    conversation turns are included in the prompt so follow-ups resolve in context. An
+    ephemeral attachment (this message only) is prepended as high-priority context and is
+    never stored or embedded.
     """
     sources = retrieve(org_id=org_id, role_level=role_level, query=query, top_k=top_k)
+    attachment = (attachment_text or "").strip()
 
-    if not sources:
+    if not sources and not attachment:
         return RagAnswer(
             answer="I don't have any information on that in the available documents.",
             sources=[],
             used_context=False,
         )
 
-    context = "\n\n".join(
-        f"[Source {i + 1}: {c.file_name}]\n{c.text}" for i, c in enumerate(sources)
-    )
+    blocks = []
+    if attachment:
+        blocks.append(f"[Attached file (this message only): {attachment_name or 'attachment'}]\n{attachment}")
+    blocks.extend(f"[Source {i + 1}: {c.file_name}]\n{c.text}" for i, c in enumerate(sources))
+    context = "\n\n".join(blocks)
+
     prompt = f"{_history_block(history)}Context:\n{context}\n\nQuestion: {query}\n\nAnswer:"
     reply = await generate(prompt, system=_SYSTEM_PROMPT, temperature=0.2)
     return RagAnswer(answer=reply, sources=sources, used_context=True)

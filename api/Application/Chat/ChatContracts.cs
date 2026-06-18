@@ -10,7 +10,8 @@ public record ChatMessageDto(
 
 public record ChatThread(Guid Id, string Title, IReadOnlyList<ChatMessageDto> Messages);
 
-public record SendMessageRequest(Guid? SessionId, string Query);
+public record SendMessageRequest(
+    Guid? SessionId, string Query, string? AttachmentText = null, string? AttachmentName = null);
 
 public record SendMessageResult(
     Guid SessionId, string Title, string Answer, string Route, bool UsedContext,
