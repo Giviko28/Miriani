@@ -25,6 +25,20 @@ public class ChatServiceTests
             LastHistory = history;
             return Task.FromResult(new AiAgentAnswer("policy_qa", "Grounded reply.", true, [], null));
         }
+
+        public Task<string> ConnectDbAsync(Guid orgId, string connectionString, CancellationToken ct = default)
+            => Task.FromResult("{}");
+
+        public Task<string> ExploreDbAsync(Guid orgId, CancellationToken ct = default)
+            => Task.FromResult("");
+
+        public Task DisconnectDbAsync(Guid orgId, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task DeleteDocumentAsync(Guid docId, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task<IReadOnlyList<string>> ReconcileDocumentsAsync(
+            Guid orgId, IReadOnlyCollection<Guid> validDocIds, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<string>>([]);
     }
 
     private static (ChatService svc, StubAi ai) NewService(Infrastructure.Persistence.AppDbContext db)
