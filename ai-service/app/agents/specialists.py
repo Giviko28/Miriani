@@ -344,14 +344,23 @@ async def db_query(state: AgentState) -> AgentState:
         dialect_hint = "Database type: SQL Server. Use GETDATE() for today."
 
     context_block = f"Database description:\n{saved_summary}\n\n" if saved_summary else ""
+    sqlite_examples = (
+        "SQLite date examples:\n"
+        "  currently on vacation:  WHERE v.start_date <= date('now') AND v.end_date >= date('now')\n"
+        "  in July:                WHERE strftime('%m', v.start_date) = '07'\n"
+        "  in July 2026:           WHERE strftime('%m', v.start_date) = '07' AND strftime('%Y', v.start_date) = '2026'\n"
+        "  upcoming:               WHERE v.start_date > date('now')\n"
+        "  NEVER use MONTH(), YEAR(), CURDATE(), NOW(), GETDATE() — SQLite does not support them.\n"
+    ) if conn_str.startswith("sqlite") else ""
     sql_prompt = (
         f"{context_block}"
         f"{dialect_hint}\n"
+        f"{sqlite_examples}"
         f"Database schema:\n{schema_text}\n\n"
         f"Question: {state['query']}\n\n"
-        "Write a single valid SELECT SQL query to answer this question. "
-        "For 'currently on vacation/leave', filter where start_date <= date('now') AND end_date >= date('now'). "
-        "Output only the SQL statement, no explanation, no code fences, no trailing semicolon."
+        "Write a single valid SELECT SQL query. "
+        "For month/period questions do NOT add a current-date range filter. "
+        "Output only the SQL, no explanation, no code fences, no trailing semicolon."
     )
     sql = (await generate(sql_prompt, system="You output only a valid SQL SELECT statement, nothing else.")).strip().rstrip(";")
 
@@ -362,6 +371,12 @@ async def db_query(state: AgentState) -> AgentState:
         sql = _re.sub(r'\bNOW\(\)', "datetime('now')", sql, flags=_re.IGNORECASE)
         sql = _re.sub(r'\bGETDATE\(\)', "datetime('now')", sql, flags=_re.IGNORECASE)
         sql = _re.sub(r'\bCURRENT_TIMESTAMP\b', "datetime('now')", sql, flags=_re.IGNORECASE)
+        # MONTH(col) → CAST(strftime('%m', col) AS INTEGER)
+        sql = _re.sub(r'\bMONTH\(([^)]+)\)', lambda m: f"CAST(strftime('%m', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
+        # YEAR(col) → CAST(strftime('%Y', col) AS INTEGER)
+        sql = _re.sub(r'\bYEAR\(([^)]+)\)', lambda m: f"CAST(strftime('%Y', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
+        # DAY(col) → CAST(strftime('%d', col) AS INTEGER)
+        sql = _re.sub(r'\bDAY\(([^)]+)\)', lambda m: f"CAST(strftime('%d', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
 
     try:
         rows = db_connector.execute_select(conn_str, sql)
