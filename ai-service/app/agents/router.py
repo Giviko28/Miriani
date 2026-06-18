@@ -11,6 +11,7 @@ _ROUTER_SYSTEM = (
     "You are a request router for a business automation system. "
     "Read the user's request and choose the single best handler. "
     "Reply with ONLY one of these exact keys and nothing else:\n"
+    "- greeting: greetings, introductions, small talk, asking who you are, or casual conversation\n"
     "- policy_qa: questions answered from company documents/policies\n"
     "- doc_summary: requests to summarize a document or content\n"
     "- email_draft: requests to write/draft an email\n"
@@ -19,6 +20,8 @@ _ROUTER_SYSTEM = (
 )
 
 _KEYWORD_HINTS = {
+    "greeting": ("hi", "hello", "hey", "who are you", "what are you", "introduce", "your name",
+                 "good morning", "good afternoon", "good evening", "howdy", "sup", "greetings"),
     "invoice_gen": ("invoice", "bill", "receipt"),
     "email_draft": ("email", "e-mail", "write to", "reply to"),
     "report_draft": ("report",),
