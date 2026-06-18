@@ -31,6 +31,12 @@ class Settings(BaseSettings):
 
     # Retrieval
     top_k: int = 4
+    # Cosine-distance ceiling (0 = identical, 2 = opposite). Chunks beyond this are
+    # dropped as irrelevant so the assistant says "I don't have that" instead of
+    # grounding on the least-bad match. Backstop only: with nomic embeddings real
+    # matches sit ~0.3-0.7, so this catches genuine garbage; the grounding system
+    # prompt is the primary guard for the medium-relevance gray zone.
+    retrieval_max_distance: float = 1.0
 
 
 settings = Settings()
