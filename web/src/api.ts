@@ -230,6 +230,16 @@ export const api = {
     deleteSession: (id: string) => request<void>(`/api/chat/sessions/${id}`, { method: "DELETE" }),
   },
 
+  // --- org database connector (admin) ---
+  orgDb: {
+    get: () => request<{ connected: boolean; dbType: string | null; schemaJson: string | null; updatedAt: string | null }>("/api/org-db"),
+    save: (dbType: string, connectionString: string) =>
+      request<{ connected: boolean; dbType: string | null; schemaJson: string | null; updatedAt: string | null }>(
+        "/api/org-db", jsonBody({ dbType, connectionString })),
+    explore: () => request<{ summary: string }>("/api/org-db/explore", { method: "POST" }),
+    disconnect: () => request<void>("/api/org-db", { method: "DELETE" }),
+  },
+
   // --- audit (admin) ---
   listAudit: () => request<AuditEntry[]>("/api/audit?take=100"),
 };
