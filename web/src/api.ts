@@ -83,6 +83,10 @@ export type SendMessageResult = {
   structured: string | null;
 };
 
+export type JiraStatus = { configured: boolean; site: string | null };
+export type JiraIssueSummary = { key: string; summary: string; status: string; issueType: string };
+export type JiraIssueDetail = JiraIssueSummary & { description: string };
+
 export type AuditEntry = {
   id: number;
   userId: string | null;
@@ -243,4 +247,99 @@ export const api = {
 
   // --- audit (admin) ---
   listAudit: () => request<AuditEntry[]>("/api/audit?take=100"),
+
+  // --- Jira ticket intake (read-only) ---
+  jira: {
+    status: () => request<JiraStatus>("/api/jira/status"),
+    list: (search?: string) =>
+      request<JiraIssueSummary[]>(`/api/jira/issues${search ? `?search=${encodeURIComponent(search)}` : ""}`),
+    get: (key: string) => request<JiraIssueDetail>(`/api/jira/issues/${encodeURIComponent(key)}`),
+  },
+
+  // --- business-process automations ---
+  // Each takes the agent's structured chat output and triggers the real-world action.
+  processes: {
+    status: () => request<ProcessStatus>("/api/processes/status"),
+
+    submitLeave: (d: any, managerEmail?: string) =>
+      request<{ sent: boolean; to: string; calendarAttached: boolean }>(
+        "/api/processes/leave/submit",
+        jsonBody({
+          employeeName: d.employee_name ?? d.employeeName ?? null,
+          startDate: d.start_date ?? d.startDate,
+          endDate: d.end_date ?? d.endDate,
+          daysRequested: Number(d.days_requested ?? d.daysRequested ?? 0),
+          managerEmail: managerEmail || null,
+          policyNote: d.policy_note ?? d.policyNote ?? null,
+          formalLetter: d.formal_letter ?? d.formalLetter ?? null,
+        })),
+
+    invoiceEmail: (d: any, clientEmail: string) =>
+      request<{ sent: boolean; to: string }>("/api/processes/invoice/email", jsonBody(invoicePayload(d, clientEmail))),
+    invoicePdf: (d: any) => downloadPdf("/api/processes/invoice/pdf", invoicePayload(d, null), `invoice-${d.client ?? "client"}.pdf`),
+
+    createTicket: (d: any) =>
+      request<{ key: string; url: string; simulated: boolean }>(
+        "/api/processes/ticket/create",
+        jsonBody({
+          summary: d.summary,
+          description: d.description ?? "",
+          priority: d.priority ?? null,
+          issueType: d.issue_type ?? d.issueType ?? "Task",
+        })),
+
+    provisionOnboarding: (d: any, newHireEmail?: string) =>
+      request<{ tickets: string[]; simulated: boolean; emailSent: boolean }>(
+        "/api/processes/onboarding/provision",
+        jsonBody({
+          role: d.role ?? null,
+          employeeName: d.employee_name ?? d.employeeName ?? null,
+          newHireEmail: newHireEmail || null,
+          day_1: d.day_1 ?? [],
+          week_1: d.week_1 ?? [],
+          month_1: d.month_1 ?? [],
+        })),
+
+    contractAlert: (d: any) =>
+      request<{ alerted: boolean; channel: string }>("/api/processes/contract/alert", jsonBody(contractPayload(d))),
+    contractReport: (d: any) => downloadPdf("/api/processes/contract/report", contractPayload(d), "contract-risk-review.pdf"),
+  },
 };
+
+export type ProcessStatus = { email: boolean; jira: boolean; jiraCanCreate: boolean; notifications: boolean };
+
+function invoicePayload(d: any, clientEmail: string | null) {
+  return {
+    client: d.client ?? "Client",
+    clientEmail,
+    currency: d.currency ?? "GEL",
+    notes: d.notes ?? null,
+    items: (d.items ?? []).map((i: any) => ({
+      description: i.description ?? "",
+      quantity: Number(i.quantity ?? i.qty ?? 0),
+      unitPrice: Number(i.unit_price ?? i.unitPrice ?? i.price ?? 0),
+    })),
+  };
+}
+
+function contractPayload(d: any) {
+  return {
+    title: d.title ?? null,
+    overallRisk: d.overall_risk ?? d.overallRisk ?? "Unknown",
+    clauses: (d.clauses ?? []).map((c: any) => ({ clause: c.clause, risk: c.risk, finding: c.finding })),
+    recommendations: d.recommendations ?? [],
+  };
+}
+
+// POST JSON and save the PDF response as a file download.
+async function downloadPdf(path: string, body: unknown, fileName: string): Promise<void> {
+  const res = await rawRequest(path, jsonBody(body));
+  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}

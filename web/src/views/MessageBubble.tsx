@@ -1,4 +1,5 @@
-import type { ChatMessage } from "../api";
+import { useState } from "react";
+import { api, type ChatMessage } from "../api";
 import { Badge, Card } from "../ui";
 
 const RISK_COLORS: Record<string, string> = {
@@ -23,6 +24,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   onboarding_gen: "Onboarding Kit",
   contract_scan: "Contract Scanner",
   db_query: "Database Query",
+  ticket_triage: "IT Helpdesk",
 };
 
 type ParsedSource = { fileName: string; distance: number; text: string };
@@ -225,16 +227,113 @@ function DbQueryCard({ data }: { data: any }) {
   );
 }
 
+const PRIORITY_COLORS: Record<string, string> = {
+  Critical: "bg-red-100 text-red-700",
+  High: "bg-orange-100 text-orange-700",
+  Medium: "bg-yellow-100 text-yellow-700",
+  Low: "bg-green-100 text-green-700",
+};
+
+function TicketCard({ data }: { data: any }) {
+  const priority: string = data.priority ?? "Medium";
+  return (
+    <div className="mt-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`rounded-full px-3 py-1 text-xs font-semibold ${PRIORITY_COLORS[priority] ?? "bg-slate-100 text-slate-600"}`}>{priority}</span>
+        {data.issue_type && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{data.issue_type}</span>}
+        {data.category && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{data.category}</span>}
+      </div>
+      {data.summary && <p className="text-sm font-semibold text-slate-800">{data.summary}</p>}
+      {data.description && <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">{data.description}</p>}
+    </div>
+  );
+}
+
 function StructuredCard({ route, data }: { route: string; data: unknown }) {
   if (route === "leave_request") return <LeaveCard data={data} />;
   if (route === "onboarding_gen") return <OnboardingCard data={data} />;
   if (route === "contract_scan") return <ContractCard data={data} />;
   if (route === "invoice_gen") return <InvoiceCard data={data} />;
   if (route === "db_query") return <DbQueryCard data={data} />;
+  if (route === "ticket_triage") return <TicketCard data={data} />;
   return (
     <pre className="mt-4 overflow-auto rounded-md bg-slate-900 p-4 text-xs text-slate-100">
       {JSON.stringify(data, null, 2)}
     </pre>
+  );
+}
+
+// --- action buttons: turn a structured chat result into a real-world action ---
+
+function ActionButton({ label, onClick, busy, tone = "blue" }: { label: string; onClick: () => void; busy: boolean; tone?: "blue" | "slate" }) {
+  const cls = tone === "blue" ? "bg-blue-600 hover:bg-blue-700" : "bg-slate-700 hover:bg-slate-800";
+  return (
+    <button
+      onClick={onClick}
+      disabled={busy}
+      className={`rounded-md px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 ${cls}`}
+    >
+      {busy ? "Working…" : label}
+    </button>
+  );
+}
+
+function ProcessActions({ route, data }: { route: string; data: any }) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+
+  if (!["leave_request", "invoice_gen", "ticket_triage", "onboarding_gen", "contract_scan"].includes(route)) return null;
+
+  async function run(fn: () => Promise<string>) {
+    setBusy(true); setError(null); setResult(null);
+    try { setResult(await fn()); }
+    catch (e) { setError(e instanceof Error ? e.message : "Action failed"); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <div className="mt-4 border-t border-slate-100 pt-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {route === "leave_request" && (
+          <ActionButton label="Email manager for approval" busy={busy}
+            onClick={() => run(async () => { const r = await api.processes.submitLeave(data, email); return `Sent to ${r.to}${r.calendarAttached ? " with a calendar hold" : ""}.`; })} />
+        )}
+        {route === "invoice_gen" && (
+          <>
+            <ActionButton label="Download PDF" tone="slate" busy={busy}
+              onClick={() => run(async () => { await api.processes.invoicePdf(data); return "PDF downloaded."; })} />
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="client@email.com"
+              className="rounded-md border border-slate-200 px-2 py-1 text-xs" />
+            <ActionButton label="Email invoice" busy={busy}
+              onClick={() => run(async () => { const r = await api.processes.invoiceEmail(data, email); return `Invoice emailed to ${r.to}.`; })} />
+          </>
+        )}
+        {route === "ticket_triage" && (
+          <ActionButton label="Create Jira ticket" busy={busy}
+            onClick={() => run(async () => { const r = await api.processes.createTicket(data); return `Created ${r.key}${r.simulated ? " (local demo ticket)" : ""}.`; })} />
+        )}
+        {route === "onboarding_gen" && (
+          <>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="newhire@email.com (optional)"
+              className="rounded-md border border-slate-200 px-2 py-1 text-xs" />
+            <ActionButton label="Provision onboarding" busy={busy}
+              onClick={() => run(async () => { const r = await api.processes.provisionOnboarding(data, email); return `Created ${r.tickets.length} task(s)${r.emailSent ? " and sent a welcome email" : ""}.`; })} />
+          </>
+        )}
+        {route === "contract_scan" && (
+          <>
+            <ActionButton label="Download report PDF" tone="slate" busy={busy}
+              onClick={() => run(async () => { await api.processes.contractReport(data); return "Report downloaded."; })} />
+            <ActionButton label="Send channel alert" busy={busy}
+              onClick={() => run(async () => { const r = await api.processes.contractAlert(data); return r.alerted ? "Alert sent to the channel." : "Logged (no webhook configured)."; })} />
+          </>
+        )}
+      </div>
+      {result && <p className="mt-2 text-xs font-medium text-green-700">✓ {result}</p>}
+      {error && <p className="mt-2 text-xs font-medium text-red-600">{error}</p>}
+    </div>
   );
 }
 
@@ -262,7 +361,10 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
       <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
 
       {structured !== null && (
-        <StructuredCard route={message.route ?? ""} data={structured} />
+        <>
+          <StructuredCard route={message.route ?? ""} data={structured} />
+          <ProcessActions route={message.route ?? ""} data={structured} />
+        </>
       )}
 
       {sources.length > 0 && (
