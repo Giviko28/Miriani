@@ -36,4 +36,10 @@ public interface IAiService
     Task<AiAgentAnswer> RunAgentAsync(
         Guid orgId, UserRole role, string query,
         IReadOnlyList<AiTurn>? history = null, CancellationToken ct = default);
+
+    /// <summary>Connect the org's external DB: introspect schema and cache it in the AI service.</summary>
+    Task<string> ConnectDbAsync(Guid orgId, string connectionString, CancellationToken ct = default);
+
+    /// <summary>Remove the org's cached DB connection from the AI service.</summary>
+    Task DisconnectDbAsync(Guid orgId, CancellationToken ct = default);
 }

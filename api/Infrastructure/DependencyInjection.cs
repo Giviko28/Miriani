@@ -3,12 +3,14 @@ using Application.Auth;
 using Application.Common;
 using Application.Documents;
 using Application.Faqs;
+using Application.OrgDb;
 using Application.Users;
 using Infrastructure.Ai;
 using Infrastructure.Audit;
 using Infrastructure.Auth;
 using Infrastructure.Documents;
 using Infrastructure.Faqs;
+using Infrastructure.OrgDb;
 using Infrastructure.Persistence;
 using Infrastructure.Storage;
 using Infrastructure.Users;
@@ -38,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<IUserAdminService, UserAdminService>();
         services.AddScoped<IFaqService, FaqService>();
         services.AddScoped<Application.Chat.IChatService, Infrastructure.Chat.ChatService>();
+        services.AddScoped<IOrgDbConfigService, OrgDbConfigService>();
 
         // Typed client for the Python AI service.
         var aiBaseUrl = config["AiService:BaseUrl"] ?? "http://localhost:8001";
