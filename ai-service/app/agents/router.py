@@ -28,15 +28,19 @@ _KEYWORD_HINTS = {
     "email_draft": ("email", "e-mail", "write to", "reply to"),
     "report_draft": ("report",),
     "doc_summary": ("summar", "tl;dr", "tldr", "key points"),
-    "leave_request": ("leave", "time off", "day off", "days off", "vacation", "annual leave",
-                      "pto", "holiday request", "request leave", "take leave"),
+    "leave_request": ("request leave", "request vacation", "take leave", "take time off",
+                      "apply for leave", "book leave", "i want to take", "i'd like to take",
+                      "annual leave", "pto request", "holiday request", "day off request"),
     "onboarding_gen": ("onboard", "onboarding", "new hire", "new employee", "new staff",
                        "joining", "first day", "checklist for"),
     "contract_scan": ("contract", "vendor", "agreement", "risk", "scan contract",
                       "review contract", "check contract", "risky clause"),
-    "db_query": ("who is on leave", "who is off", "check availability", "is available",
+    "db_query": ("who is on leave", "who is off", "who has leave", "who is on vacation",
+                 "vacation schedule", "leave schedule", "show me vacation", "show me leave",
+                 "check availability", "is available", "is free", "any conflicts",
                  "query the database", "from the database", "from the system",
-                 "show me scheduled", "scheduled leave", "schedule conflict"),
+                 "show me scheduled", "scheduled leave", "schedule conflict",
+                 "who is taking", "who took", "list of employees on"),
 }
 
 
