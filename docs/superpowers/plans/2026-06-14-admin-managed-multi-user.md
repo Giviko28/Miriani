@@ -261,7 +261,7 @@ Frontend (`web/`):
 - [ ] Admin uploads a doc on Knowledge → status reaches Indexed.
 - [ ] FAQ chip on chat runs a grounded answer.
 - [ ] Leave a session idle past 15 min (or shorten token) → silent refresh keeps it alive.
-- [ ] Update `CLAUDE.md` (new auth model, seeded admin creds, endpoints). Commit docs.
+- [ ] Update `docs/ARCHITECTURE.md` (new auth model, seeded admin creds, endpoints). Commit docs.
 
 ---
 

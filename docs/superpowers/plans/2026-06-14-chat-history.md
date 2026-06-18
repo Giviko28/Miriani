@@ -345,7 +345,7 @@ chat: {
   remote-work policy question (grounded answer), ask a follow-up ("what about for managers?")
   and confirm it is answered in context; reload and confirm the session is listed and
   resumable; delete a session; confirm another user cannot see it.
-- [ ] Update `CLAUDE.md` (chat history feature, new tables, `/api/chat/*` endpoints, AI
+- [ ] Update `docs/ARCHITECTURE.md` (chat history feature, new tables, `/api/chat/*` endpoints, AI
   `history` field). Commit: `docs: record chat history feature`.
 
 ---
