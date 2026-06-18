@@ -92,6 +92,12 @@ public class AiServiceClient(HttpClient http) : IAiService
         resp.EnsureSuccessStatusCode();
     }
 
+    public async Task DeleteDocumentAsync(Guid docId, CancellationToken ct = default)
+    {
+        var resp = await http.DeleteAsync($"/ingest/{docId}", ct);
+        resp.EnsureSuccessStatusCode();
+    }
+
     private record IngestBody(string Doc_Id, int Chunks);
     private record DbSchemaBody(string Org_Id, List<object> Tables);
     private record DbExploreBody(string Org_Id, string Summary, int Tables_Explored);

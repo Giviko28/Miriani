@@ -35,4 +35,11 @@ public class LocalFileStorage : IFileStorage
         var size = new FileInfo(fullPath).Length;
         return (fullPath, size);
     }
+
+    public Task DeleteAsync(string storagePath, CancellationToken ct = default)
+    {
+        if (File.Exists(storagePath))
+            File.Delete(storagePath);
+        return Task.CompletedTask;
+    }
 }

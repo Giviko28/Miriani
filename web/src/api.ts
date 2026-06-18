@@ -187,6 +187,7 @@ export const api = {
     form.append("accessRole", String(accessRole));
     return request<DocumentDto>("/api/documents", { method: "POST", body: form });
   },
+  deleteDocument: (id: string) => request<void>(`/api/documents/${id}`, { method: "DELETE" }),
 
   // --- AI ---
   runAgent: (query: string) => request<AgentResult>("/api/ai/agent", jsonBody({ query })),

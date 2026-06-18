@@ -89,6 +89,7 @@ export function Knowledge() {
                 <th>Access</th>
                 <th>Status</th>
                 <th>Size</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -98,6 +99,22 @@ export function Knowledge() {
                   <td>{ROLE_NAMES[d.accessRole]}+</td>
                   <td><Badge tone={STATUS[d.status].tone}>{STATUS[d.status].label}</Badge></td>
                   <td className="text-slate-500">{(d.sizeBytes / 1024).toFixed(1)} KB</td>
+                  <td className="text-right">
+                    <button
+                      onClick={async () => {
+                        if (!confirm(`Delete "${d.fileName}"?`)) return;
+                        try {
+                          await api.deleteDocument(d.id);
+                          await refresh();
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : "Delete failed");
+                        }
+                      }}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

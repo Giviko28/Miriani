@@ -29,4 +29,12 @@ public class DocumentsController(IDocumentService documents) : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken ct)
         => Ok(await documents.ListAsync(ct));
+
+    /// <summary>Delete a document and remove it from the vector store.</summary>
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        await documents.DeleteAsync(id, ct);
+        return NoContent();
+    }
 }
