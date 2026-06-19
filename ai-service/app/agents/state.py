@@ -4,7 +4,7 @@ from typing import Any, TypedDict
 
 # Stable keys for the specialized agents. These mirror the BusinessProcess.AgentKey
 # values seeded in the .NET database.
-AGENT_KEYS = ["greeting", "policy_qa", "email_draft", "ticket_triage", "ticket_advice", "db_query"]
+AGENT_KEYS = ["greeting", "policy_qa", "email_draft", "ticket_triage", "ticket_advice", "db_query", "doc_qa"]
 
 
 class AgentState(TypedDict, total=False):
