@@ -46,3 +46,58 @@
     animation: spin 0.6s linear infinite;
   }
 }
+
+/* ---------- Landing page (public) — editorial type + restrained motion ---------- */
+.landing-root {
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+.landing-root .font-display {
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+.landing-root [data-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  will-change: opacity, transform;
+}
+.landing-root [data-reveal].is-visible {
+  animation: landing-reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes landing-reveal {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-root [data-reveal],
+  .landing-root [data-reveal].is-visible {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+}
+
+/* Hero chat demo — message pop-in, typing dots, input caret */
+@keyframes chat-pop {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: none; }
+}
+.landing-root .chat-msg {
+  animation: chat-pop 0.3s ease-out both;
+}
+@keyframes chat-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+  40% { transform: translateY(-3px); opacity: 1; }
+}
+.landing-root .chat-dot {
+  animation: chat-bounce 1.2s infinite ease-in-out;
+}
+@keyframes chat-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.landing-root .chat-caret {
+  animation: chat-blink 1s step-end infinite;
+}
