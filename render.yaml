@@ -52,6 +52,18 @@ services:
         value: https://miriani-ai.onrender.com
       - key: Cors__AllowedOrigins__0
         value: https://miriani-web.onrender.com
+      # --- Jira ticket workspace (set these to enable the Jira tab + read/write actions) ---
+      - key: Jira__BaseUrl
+        sync: false # e.g. https://your-site.atlassian.net
+      - key: Jira__Email
+        sync: false # the Atlassian account email
+      - key: Jira__ApiToken
+        sync: false # id.atlassian.com -> Security -> API tokens
+      - key: Jira__ProjectKey
+        value: OPS
+      # --- Slack/Teams webhook for contract-review alerts (process #5) ---
+      - key: Notifications__WebhookUrl
+        sync: false
 
   # 3) React frontend (static). Built with Vite; talks only to the gateway.
   - type: web
