@@ -25,6 +25,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         b.Entity<Organization>(e =>
         {
             e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.DisplayName).HasMaxLength(200);
+            e.Property(x => x.Tagline).HasMaxLength(280);
+            e.Property(x => x.AccentColor).HasMaxLength(16);
+            e.Property(x => x.LogoContentType).HasMaxLength(128);
         });
 
         b.Entity<User>(e =>

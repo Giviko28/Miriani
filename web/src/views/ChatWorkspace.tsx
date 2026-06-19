@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, type ChatAttachment, type ChatMessage, type ChatSessionSummary } from "../api";
 import { ROLE_NAMES, useAuth } from "../auth";
+import { BrandHeader } from "../branding";
 import { Badge, Button } from "../ui";
 import { ChangePassword } from "./ChangePassword";
 import { JiraPicker, formatTicketPrompt } from "./JiraPicker";
@@ -143,8 +144,8 @@ export function ChatWorkspace() {
     <div className="flex h-screen overflow-hidden bg-transparent text-slate-900">
       {/* History sidebar */}
       <aside className="flex w-72 shrink-0 flex-col border-r border-slate-200/60 bg-slate-50/80 backdrop-blur-md">
-        <div className="flex items-center gap-2 px-4 py-4">
-          <span className="text-lg font-semibold tracking-tight">Miriani</span>
+        <div className="px-4 py-4">
+          <BrandHeader />
         </div>
         <div className="px-3">
           <Button onClick={() => { newChat(); setView("chat"); }} className="w-full justify-start gap-2">
@@ -235,9 +236,7 @@ export function ChatWorkspace() {
           <div className="mx-auto w-full max-w-3xl px-4 py-6">
             {messages.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-5 pt-24 text-center animate-slide-up">
-                <div className="h-16 w-16 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20 mb-2">
-                  <span className="text-white text-2xl">✨</span>
-                </div>
+                <img src="/miriani-logo.png" alt="Miriani" className="mb-2 h-20 w-20 object-contain" />
                 <h1 className="text-3xl font-bold tracking-tight text-slate-800">Hi, I'm Miriani.</h1>
                 <p className="max-w-md text-sm leading-relaxed text-slate-500">
                   I'm here to help you get things done. Answers are grounded in your organization's documents.

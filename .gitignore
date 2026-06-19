@@ -38,6 +38,9 @@ chroma_store/
 ai-service/chroma_store/
 *.gguf
 
+# ---- Per-org external DB connection configs (contain connection secrets) ----
+ai-service/db_configs/
+
 # ---- Secrets ----
 *.env
 .env.*

@@ -2,7 +2,9 @@
 // is attached automatically and silently refreshed when it expires. The frontend never talks
 // to the Python AI service directly.
 
-const API_BASE = "http://localhost:5080";
+// Gateway base URL. Defaults to the local dev gateway; the deployed build sets VITE_API_BASE
+// (e.g. https://bpa-api.onrender.com) at build time. Trailing slash trimmed for safe concat.
+const API_BASE = (import.meta.env.VITE_API_BASE ?? "http://localhost:5080").replace(/\/$/, "");
 const ACCESS_KEY = "bpa_access";
 const REFRESH_KEY = "bpa_refresh";
 
@@ -102,6 +104,14 @@ export type JiraIssueDetail = JiraIssueSummary & {
   updated?: string | null;
   labels?: string[] | null;
   comments?: JiraComment[] | null;
+};
+
+export type OrgBranding = {
+  companyName: string;
+  displayName: string | null;
+  tagline: string | null;
+  accentColor: string | null;
+  hasLogo: boolean;
 };
 
 export type AuditEntry = {
@@ -274,6 +284,33 @@ export const api = {
 
   // --- audit (admin) ---
   listAudit: () => request<AuditEntry[]>("/api/audit?take=100"),
+
+  // --- company branding / profile ---
+  org: {
+    branding: () => request<OrgBranding>("/api/org/branding"),
+    updateBranding: (d: { displayName?: string | null; tagline?: string | null; accentColor?: string | null }) =>
+      request<OrgBranding>("/api/org/branding", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName: d.displayName ?? null,
+          tagline: d.tagline ?? null,
+          accentColor: d.accentColor ?? null,
+        }),
+      }),
+    uploadLogo: (file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return request<{ uploaded: boolean }>("/api/org/branding/logo", { method: "POST", body: form });
+    },
+    removeLogo: () => request<void>("/api/org/branding/logo", { method: "DELETE" }),
+    // Fetch the logo with the bearer token and hand back an object URL (<img> can't send headers).
+    logoObjectUrl: async (): Promise<string | null> => {
+      const res = await rawRequest("/api/org/branding/logo", {});
+      if (!res.ok) return null;
+      return URL.createObjectURL(await res.blob());
+    },
+  },
 
   // --- Jira ticket intake (read-only) ---
   jira: {

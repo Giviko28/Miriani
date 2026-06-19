@@ -3,8 +3,14 @@
 import json
 from pathlib import Path
 
-_CACHE_DIR = Path(__file__).parent.parent.parent / "db_configs"
-_CACHE_DIR.mkdir(exist_ok=True)
+from app.config import settings
+
+_CACHE_DIR = (
+    Path(settings.db_configs_dir)
+    if settings.db_configs_dir
+    else Path(__file__).parent.parent.parent / "db_configs"
+)
+_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _path(org_id: str) -> Path:

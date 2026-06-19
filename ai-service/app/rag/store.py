@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import chromadb
 
 from app.config import settings
-from app.rag.embeddings import OllamaEmbeddingFunction
+from app.rag.embeddings import get_embedding_function
 
 
 @dataclass
@@ -25,7 +25,7 @@ class VectorStore:
         self._client = chromadb.PersistentClient(path=settings.chroma_path)
         self._collection = self._client.get_or_create_collection(
             name=settings.collection_name,
-            embedding_function=OllamaEmbeddingFunction(),
+            embedding_function=get_embedding_function(),
             metadata={"hnsw:space": "cosine"},
         )
 

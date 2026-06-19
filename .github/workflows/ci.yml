@@ -1,0 +1,48 @@
+name: CI
+
+# Build and test on every push and PR. Render handles deployment (CD) automatically when
+# the connected branch updates, so this workflow's job is to keep that branch green.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  api:
+    name: .NET gateway (build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+      - name: Restore
+        run: dotnet restore api/Api/Api.csproj
+      - name: Build
+        run: dotnet build api/Api/Api.csproj --no-restore -c Release
+      - name: Test
+        run: dotnet test api/Tests/Tests.csproj -c Release
+
+  web:
+    name: React frontend (build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        run: npm install
+        working-directory: web
+      - name: Build
+        run: npm run build
+        working-directory: web
+
+  ai:
+    name: AI service (image build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t miriani-ai ./ai-service

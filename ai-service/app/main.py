@@ -20,6 +20,7 @@ from app.config import settings
 from app.db import connector as db_connector
 from app.db import schema_cache
 from app.ingestion.extract import UnsupportedFileType, extract_text
+from app.llm import client as llm_client
 from app.rag import service as rag
 from app.rag.store import vector_store
 
@@ -46,18 +47,15 @@ def health() -> dict[str, object]:
 @app.post("/ping-llm", response_model=PingResponse)
 async def ping_llm(req: PingRequest) -> PingResponse:
     started = time.perf_counter()
-    payload = {"model": settings.ollama_model, "prompt": req.prompt, "stream": False}
+    active_model = settings.groq_model if settings.llm_provider.lower() == "groq" else settings.ollama_model
     try:
-        async with httpx.AsyncClient(timeout=settings.request_timeout_seconds) as client:
-            resp = await client.post(f"{settings.ollama_base_url}/api/generate", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
+        reply = await llm_client.generate(req.prompt)
     except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=f"Ollama request failed: {exc}") from exc
+        raise HTTPException(status_code=502, detail=f"LLM request failed: {exc}") from exc
 
     return PingResponse(
-        model=settings.ollama_model,
-        reply=data.get("response", "").strip(),
+        model=active_model,
+        reply=reply,
         elapsed_seconds=round(time.perf_counter() - started, 2),
     )
 
