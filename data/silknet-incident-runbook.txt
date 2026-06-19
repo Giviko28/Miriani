@@ -1,0 +1,124 @@
+SILKNET LLC — NETWORK INCIDENT MANAGEMENT RUNBOOK
+NOC & Field Operations | Rev 8.3 | March 2025
+INTERNAL — NOC USE ONLY
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INCIDENT SEVERITY LEVELS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+P1 — CRITICAL (Major Outage)
+  Definition: Core backbone segment down; OR >1,000 residential subscribers affected;
+              OR any Platinum/Enterprise client fully offline.
+  Response target:  NOC engineer acknowledges within 5 minutes.
+  Bridge call:      Mandatory within 15 minutes. Bridge: +995 32 222 6001 pin 9911.
+  Escalation:       NOC Lead → Head of Network Operations → CTO (auto-paged via PagerDuty).
+  Restoration:      15 min for Platinum; 30 min for Enterprise; 4 h for mass residential.
+  Communications:   Status page updated immediately; TAM calls Platinum clients within
+                    10 minutes; automated SMS to Enterprise contacts.
+
+P2 — HIGH (Regional Degradation)
+  Definition: Regional node degraded; 100–999 subscribers affected; OR SME client down;
+              OR Enterprise client experiencing packet loss >5 % sustained.
+  Response target:  NOC engineer acknowledges within 15 minutes.
+  Bridge call:      If not resolved within 30 minutes, open bridge call.
+  Escalation:       NOC Lead notified within 30 minutes; Head of Ops at 2 hours.
+  Restoration:      2 hours for Enterprise; 4 hours for SME; 8 hours residential.
+  Communications:   Status page updated; TAM emails affected Enterprise clients.
+
+P3 — MEDIUM (Localised Outage)
+  Definition: Single node or street cabinet down; <100 subscribers; no Enterprise client.
+  Response target:  Assigned to field team within 1 hour.
+  Escalation:       NOC Lead if unresolved after 4 hours.
+  Restoration:      4 hours for SME; 8 hours residential.
+  Communications:   Ticket update only; no proactive customer contact unless requested.
+
+P4 — LOW (Single Subscriber / Degraded Service)
+  Definition: One subscriber down or slow; no SLA breach.
+  Response target:  Assigned to field team within 4 hours during business hours.
+  Restoration:      Next business day acceptable.
+  Communications:   Standard ticket update.
+
+IMPORTANT — Corporate client rule: Always classify a corporate client incident ONE
+level higher than the subscriber count would normally suggest. A single Platinum client
+offline = P1 regardless of scale.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+P1 RESPONSE PROCEDURE — STEP BY STEP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Step 1 — Detect and confirm
+  Check fiber monitoring (Zabbix dashboard: noc.silknet.ge/zabbix).
+  Confirm alarm is not a false positive: cross-reference SNMP traps and customer calls.
+  Identify affected segment: use the network topology map (Atlas → Backbone View).
+
+Step 2 — Create Jira incident ticket immediately
+  Project: NOC | Issue type: Incident | Priority: Critical
+  Title format: "[P1] <Segment/Client> — <Symptom>" e.g. "[P1] Tbilisi-Gori Backbone — Fiber Cut"
+  Required fields: affected segment, estimated subscriber count, first detected time,
+  monitoring alarm IDs. Use Miriani to draft the Jira ticket: type the incident details
+  and Miriani will format and create the P1 ticket for you.
+
+Step 3 — Activate bridge call
+  Dial +995 32 222 6001, enter pin 9911.
+  Roles on the call: NOC Lead (chair), assigned engineer, TAM (if corporate client affected),
+  field dispatch coordinator.
+
+Step 4 — Diagnose
+  Fiber cut: Check OTDR at both ends. Dispatch field crew to km marker shown on OTDR.
+  Node failure: Check power (UPS status via BMS), check hardware (console port if accessible),
+  attempt remote reboot via out-of-band management (OOB: oob.silknet.ge).
+  BGP/routing issue: Check Huawei NCE / Cisco NSO for route withdrawals; check upstream
+  peers (Cogent AS174, DE-CIX Frankfurt session) via looking glass.
+
+Step 5 — Mitigate
+  If fiber cut: reroute traffic via alternate path (pre-configured in Huawei NCE as
+  "Emergency Path <segment>"). Notify field crew for physical repair.
+  If node failure: failover to standby node if dual-homed. Otherwise escalate to vendor
+  (Huawei TAC: +852 2872 2288; Cisco TAC: +1 800 553 2447).
+  If BGP: contact upstream NOC; apply route filter or prepend as needed.
+
+Step 6 — Notify clients
+  Platinum: TAM calls primary technical contact within 10 minutes of P1 declaration.
+  Enterprise: Automated email via NOC system; TAM follows up by phone.
+  Use Miriani to draft client outage notification emails: "Draft outage email to [Client]
+  about the [issue] affecting them since [time]."
+
+Step 7 — Resolve and close
+  Confirm service restored on monitoring. Wait 5 minutes for stability.
+  Update Jira ticket: set status to Resolved, fill in RCA fields.
+  Send restoration notification to all affected clients.
+  Initiate post-incident review within 48 hours for all P1 events.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY CONTACTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NOC 24/7 duty line:        +995 32 222 6000
+NOC Lead (on-call):        PagerDuty escalation → noc-lead@silknet.com
+Head of Network Ops:       Giorgi Khvedelidze | gkhvedelidze@silknet.com
+CTO:                       Nino Tatarashvili | ntatarashvili@silknet.com
+Huawei TAC (24/7):         +852 2872 2288 | Contract ID: SLK-HW-2024-009
+Cisco TAC (24/7):          +1 800 553 2447 | Contract ID: SLK-CSC-2023-041
+Upstream — Cogent NOC:     +1 877 7-COGENT
+Upstream — DE-CIX NOC:     noc@de-cix.net
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+COMMON SCENARIOS & QUICK ACTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Scenario: "Tbilisi east district — mass outage, IPTV and internet both down"
+  → Check Saburtalo OLT (GPON chassis SBR-OLT-01) in Zabbix. Likely OLT power or
+    uplink failure. Dispatch to Javakhishvili St. PoP (key cabinet E-04).
+
+Scenario: "Bank of Georgia HQ says internet is down"
+  → P1 immediately (Platinum client). Check BoG dedicated fiber port on MSW-TBS-CORE-01.
+    TAM Lasha Beridze must be on the bridge call. SLA clock starts at first call time.
+
+Scenario: "BGP session to Cogent dropped, international traffic affected"
+  → Check MSW-TBS-CORE-02 BGP summary. If session down, contact Cogent NOC immediately.
+    Fail traffic to DE-CIX path (pre-configured policy EMERGENCY-INTL-FAIL).
+
+Scenario: "Fiber cut reported on Gori highway (km 47)"
+  → Dispatch crew from Gori depot (crew lead: Vakhtang Jorjoliani +995 599 44 2211).
+    ETA to site ~45 min. Expected repair time 2–4 hours depending on cable count.
+    Activate Gori emergency path in Huawei NCE: path ID GORI-EMG-01.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

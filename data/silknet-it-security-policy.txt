@@ -1,0 +1,126 @@
+SILKNET LLC — IT & INFORMATION SECURITY POLICY
+Version 3.0 | Effective: 1 March 2025
+Confidential — For Internal Use Only
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. SCOPE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+This policy applies to all Silknet employees, contractors, and third-party vendors
+who access Silknet systems, networks, or data. Non-compliance may result in
+disciplinary action, contract termination, and legal liability.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. HOW TO REQUEST IT EQUIPMENT OR ACCESS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+New equipment or system access requests:
+  1. Submit a ticket via the Miriani AI assistant ("I need a new laptop" or
+     "I need access to the billing system") — Miriani will route this to IT Helpdesk
+     and create a Jira ticket automatically.
+  2. Alternatively, email it-helpdesk@silknet.com with your employee ID in the subject.
+  3. Standard SLA: laptops and peripherals — 3 working days. Software licences — 1 day.
+     Network access provisioning — 2 hours for standard roles, up to 2 days for
+     elevated/privileged access requiring Security team approval.
+
+Loaner equipment for travel is available from the IT Asset store on Floor 2 (Tbilisi HQ).
+Reserve at least 2 working days in advance via the Helpdesk.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. PASSWORD POLICY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+All Silknet accounts (Windows AD, email, Jira, VPN, cloud portals) must use:
+  • Minimum 12 characters
+  • At least one uppercase, one lowercase, one digit, one special character
+  • No reuse of last 10 passwords
+  • Password rotation every 90 days (enforced by AD policy)
+
+Multi-factor authentication (MFA) is mandatory for:
+  • VPN access
+  • Microsoft 365 / email
+  • Jira and Confluence
+  • AWS and Azure consoles
+  • The Silknet Customer Data Platform
+
+Password managers: Silknet licenses 1Password for all employees. Setup instructions
+are on the intranet (IT Guides → 1Password). Use of personal password managers is
+discouraged but not prohibited.
+
+Sharing passwords is strictly prohibited and is grounds for disciplinary action.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. VPN USAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The Silknet corporate VPN (Cisco AnyConnect) must be active whenever accessing any
+internal system remotely — including email, Jira, ERP, or HR portal.
+
+VPN tokens are issued by the IT Security team. If your token is lost or stolen, report
+it immediately to it-security@silknet.com and call +995 32 222 0100 ext. 1099.
+
+VPN split-tunneling is disabled; all traffic is routed through Silknet's security
+gateways when the VPN is active.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. ACCEPTABLE USE OF COMPANY DEVICES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Company laptops, phones, and SIM cards are provided for business use. Incidental
+personal use is tolerated but must not:
+  • Install unauthorized software (only Software Center / approved app catalogue)
+  • Disable antivirus (Sophos Endpoint) or firewall
+  • Connect to public Wi-Fi without VPN active
+  • Store customer data on personal cloud services (Google Drive, personal Dropbox, etc.)
+  • Access adult content, gambling, or illegal material
+
+Company devices are subject to remote monitoring and may be wiped remotely if lost,
+stolen, or if the employee is under investigation.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. DATA CLASSIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Public       — Marketing materials, press releases.
+Internal     — Internal memos, project plans. Do not share externally without approval.
+Confidential — Customer data, financial records, network maps. Encrypt in transit and
+               at rest; share only on need-to-know basis.
+Restricted   — Signing keys, authentication secrets, M&A data. Access requires CISO
+               sign-off; must never leave Silknet-controlled systems.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. REPORTING SECURITY INCIDENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Report immediately if you:
+  • Suspect your account has been compromised
+  • Receive a suspicious phishing email
+  • Lose or have a device stolen
+  • Observe unusual activity on network equipment
+
+How to report:
+  • Via Miriani: "I think I have a security incident" — creates a P1 Jira ticket.
+  • Email: it-security@silknet.com (monitored 24/7)
+  • Phone: Security hotline +995 32 222 0100 ext. 1099 (24/7)
+
+Never attempt to investigate or resolve a security incident yourself — always escalate
+to the Security team.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+8. SOFTWARE & LICENCES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Standard software stack (pre-installed on all Silknet laptops):
+  • Microsoft 365 (Word, Excel, Outlook, Teams)
+  • Jira & Confluence (project management and wiki)
+  • Sophos Endpoint (antivirus)
+  • Cisco AnyConnect (VPN)
+  • Zoom (video conferencing)
+  • Miriani AI Assistant (internal portal)
+
+Requests for additional licences (Adobe, AutoCAD, specialist tools, etc.) must go
+through IT Helpdesk with department head approval. Unlicensed software is prohibited.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+9. BYOD (BRING YOUR OWN DEVICE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Personal devices may only connect to the "Silknet-Guest" Wi-Fi network on company
+premises. Access to internal systems from personal devices requires explicit Security
+team approval and installation of Silknet Mobile Device Management (MDM) profile.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Contact: it-helpdesk@silknet.com | IT Security: it-security@silknet.com
+Helpdesk ext. 1030 | Security hotline ext. 1099 (24/7)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

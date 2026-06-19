@@ -10,8 +10,8 @@ export function Button({ className, ...props }: ButtonHTMLAttributes<HTMLButtonE
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white",
-        "transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:shadow-md",
+        "transition-all duration-200 hover:bg-slate-800 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
         className,
       )}
       {...props}
@@ -23,8 +23,8 @@ export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElem
   return (
     <input
       className={cn(
-        "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none",
-        "focus:border-slate-500 focus:ring-2 focus:ring-slate-200",
+        "w-full rounded-lg border border-slate-200 bg-white/60 px-3 py-2 text-sm outline-none transition-all duration-200",
+        "focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100",
         className,
       )}
       {...props}
@@ -36,7 +36,7 @@ export function Select({ className, children, ...props }: SelectHTMLAttributes<H
   return (
     <select
       className={cn(
-        "rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500",
+        "rounded-lg border border-slate-200 bg-white/60 px-3 py-2 text-sm outline-none transition-all duration-200 focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-100",
         className,
       )}
       {...props}
@@ -47,20 +47,20 @@ export function Select({ className, children, ...props }: SelectHTMLAttributes<H
 }
 
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return <div className={cn("rounded-xl border border-slate-200 bg-white p-5 shadow-sm", className)}>{children}</div>;
+  return <div className={cn("rounded-2xl border border-slate-200/60 bg-white p-5 shadow-sm transition-all duration-300 hover:shadow-md", className)}>{children}</div>;
 }
 
 const BADGE_TONES: Record<string, string> = {
-  slate: "bg-slate-100 text-slate-700",
-  green: "bg-green-100 text-green-700",
-  amber: "bg-amber-100 text-amber-800",
-  red: "bg-red-100 text-red-700",
-  blue: "bg-blue-100 text-blue-700",
+  slate: "bg-slate-100/80 text-slate-700 ring-1 ring-inset ring-slate-200",
+  green: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200/60",
+  amber: "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200/60",
+  red: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-200/60",
+  blue: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-200/60",
 };
 
 export function Badge({ tone = "slate", children }: { tone?: keyof typeof BADGE_TONES; children: ReactNode }) {
   return (
-    <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium", BADGE_TONES[tone])}>
+    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide", BADGE_TONES[tone])}>
       {children}
     </span>
   );

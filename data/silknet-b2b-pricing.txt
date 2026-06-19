@@ -1,0 +1,112 @@
+SILKNET LLC — B2B SERVICES & PRICING GUIDE
+Sales & Account Management Reference | Rev 3.2 | January 2025
+CONFIDENTIAL — Do not share with clients; use as internal reference only.
+
+This document is the single source of truth for pricing all corporate services.
+Always check with Sales Operations (sales-ops@silknet.com) before quoting a
+strategic deal (>50,000 GEL/year) as custom pricing may apply.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. DEDICATED FIBER INTERNET (DIA — Dedicated Internet Access)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+All prices are monthly recurring, in GEL, excluding VAT (18 %).
+Symmetrical bandwidth, uncontended, SLA tier assigned per contract value (see SLA doc).
+
+  100 Mbps      350 GEL / month
+  200 Mbps      600 GEL / month
+  500 Mbps      900 GEL / month
+  1 Gbps      1,500 GEL / month
+  2 Gbps      2,600 GEL / month
+  10 Gbps     8,000 GEL / month
+  10 Gbps (redundant dual-path)  14,000 GEL / month
+
+Setup / installation fee: Equal to one month's recurring fee.
+Waived for: contracts ≥ 24 months, or contract value > 18,000 GEL/year.
+
+CPE (router provided by Silknet): 0 GEL on 12-month+ contracts (Huawei AR651).
+Client-managed CPE: BGP hand-off available; AS64512 range allocated by NOC.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. MPLS / PRIVATE WAN (MULTI-SITE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Base hub site (Tbilisi):        200 GEL / month
+Each additional spoke site:     150 GEL / month per site
+Bandwidth per site:             Priced per DIA table above
+
+Example — Tegeta Motors (8 showrooms + head office):
+  Hub (HQ, 1 Gbps):       1,500 GEL
+  8 spokes (100 Mbps each): 8 × (350 + 150) = 4,000 GEL
+  Total recurring:         5,500 GEL / month (+ VAT)
+
+QoS classes available: 4 (Voice priority, Business Critical, Best Effort, Bulk).
+Minimum contract: 12 months.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. DATA CENTRE & COLOCATION (TBILISI DC — TSERETELI)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+The Tbilisi DC is Tier III certified (99.98 % uptime). Power redundancy: 2N UPS + diesel.
+
+  1U rack unit:          80 GEL / month
+  Quarter rack (10U):   600 GEL / month
+  Half rack (22U):    1,100 GEL / month
+  Full rack (42U):    2,000 GEL / month
+  Full rack + KVM:    2,200 GEL / month
+
+Power:
+  Included: 2 kW per full rack (shared circuit).
+  Dedicated 16A circuit: +200 GEL / month.
+  Dedicated 32A circuit: +380 GEL / month.
+
+Cross-connects (within DC):
+  Copper (Cat6):        50 GEL / month per port pair
+  Fiber (LC/SM):       100 GEL / month per port pair
+
+Remote hands: 80 GEL per 30 min during business hours; 150 GEL per 30 min after hours.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. SILKNET CLOUD BACKUP & STORAGE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Encrypted at-rest, replicated across two Georgian data centres.
+
+  1 TB:      40 GEL / month
+  5 TB:     180 GEL / month
+  10 TB:    320 GEL / month
+  50 TB:  1,400 GEL / month
+  Custom:   Contact sales-ops@silknet.com
+
+Retention: 30-day versioning standard; 365-day retention available at +30 % on storage price.
+Restore SLA: Data available within 4 hours; emergency restore (same-day) at +500 GEL/event.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. MANAGED SECURITY SERVICES (MSSP ADD-ON)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Available on top of any DIA or MPLS service:
+
+  DDoS mitigation (up to 10 Gbps scrubbing):     400 GEL / month
+  DDoS mitigation (up to 100 Gbps scrubbing):  2,000 GEL / month
+  Managed firewall (Fortinet FortiGate):          350 GEL / month (includes HW)
+  Web Application Firewall (WAF):                 600 GEL / month
+  SOC monitoring (24/7, SIEM-as-a-service):     3,500 GEL / month
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. PAYMENT TERMS & INVOICING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Invoices are issued on the 1st of each month for that month's services.
+Payment due: Net-30 from invoice date.
+Late payment: 0.1 % per calendar day on outstanding balance after due date.
+Currency: Georgian Lari (GEL). International contracts may be indexed to USD at
+NBG rate on invoice date; agree in contract.
+
+Invoice contacts: billing@silknet.com | Billing hotline: ext. 1050
+Use Miriani to generate a draft invoice for a client: "Generate an invoice for
+[Client] for [services] for [month]" — Miriani uses this pricing guide as reference.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. CONTRACT TERMS — STANDARD CLAUSES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Minimum contract duration: 12 months (24 months for waived setup fee).
+Early termination fee: Remaining months × monthly recurring fee × 50 %.
+Renewal: Auto-renews for 12 months unless written notice given 60 days before expiry.
+Governing law: Georgian law; disputes resolved in Tbilisi City Court.
+Bandwidth guarantee: 100 % of contracted bandwidth at all times (CIR = EIR for DIA).
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

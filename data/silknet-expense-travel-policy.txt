@@ -1,0 +1,108 @@
+SILKNET LLC — EXPENSE & BUSINESS TRAVEL POLICY
+Version 2.1 | Effective: 1 January 2025
+Confidential — For Internal Use Only
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. PURPOSE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+This policy governs how Silknet employees incur, document, and recover business
+expenses. All expenditure must be necessary, reasonable, and in the best interests
+of Silknet. Employees who abuse this policy will be subject to disciplinary action
+and may be required to repay funds.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. SUBMITTING AN EXPENSE REPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Deadline: Expense reports must be submitted within 10 working days of the expense
+being incurred. Late submissions require VP-level approval and may be denied.
+
+How to submit:
+  1. Log in to the Silknet HR Portal (hr.silknet.ge).
+  2. Navigate to Finance → Expense Claims → New Claim.
+  3. Enter each expense line: date, category, amount (GEL), description.
+  4. Attach a photo or scan of the original receipt for every item above 20 GEL.
+  5. Submit for line-manager approval.
+
+Alternatively, ask Miriani: "I need to submit an expense report for [details]"
+and Miriani will draft the claim form for you.
+
+Approval chain:
+  • Up to 500 GEL   → Line manager
+  • 501–2,000 GEL   → Line manager + department head
+  • Above 2,000 GEL → Line manager + department head + Finance Director
+
+Reimbursement: Approved claims are paid via bank transfer to the employee's salary
+account on the 15th of the following month.
+
+Receipts: Original receipts must be kept by the employee for 12 months after
+reimbursement in case of audit. Digital scans are acceptable for items under 500 GEL.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. ELIGIBLE EXPENSE CATEGORIES & LIMITS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Category                 | Limit per occasion        | Notes
+─────────────────────────┼───────────────────────────┼──────────────────────────────
+Business meals           | 80 GEL per person         | Alcohol capped at 20 GEL/person
+Client entertainment     | 200 GEL per person        | Pre-approval required; max 8 people
+Taxi / ride-share        | Actual cost               | Uber/Bolt receipt required
+Parking                  | 15 GEL per day            | Tbilisi city centre only
+Mobile top-up (roaming)  | 50 GEL per trip           | Non-Silknet SIM only
+Office supplies          | 100 GEL per month         | Receipts required above 20 GEL
+Training materials       | 300 GEL per course        | Pre-approved by HR
+Gifts to clients         | 50 GEL per recipient      | Must be branded Silknet merchandise
+
+Personal expenses (groceries, personal clothing, gym, etc.) are NOT reimbursable.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. DOMESTIC BUSINESS TRAVEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Travel to another Silknet regional office or customer site within Georgia:
+
+Daily per diem (meals & incidentals): 60 GEL per day
+Accommodation cap: 150 GEL per night (single room)
+Transport: Train (1st class) or minibus; private taxi pre-approved for locations with
+no public transport.
+
+Trips must be logged in the HR portal under Travel Requests at least 3 working days
+in advance.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. INTERNATIONAL BUSINESS TRAVEL
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+All international travel requires approval from the employee's department head and
+a completed Travel Request Form submitted at least 10 working days before departure.
+
+Daily per diem by region:
+  EU / UK / US / UAE: 120 USD equivalent
+  CIS countries (Armenia, Azerbaijan, Turkey): 80 USD equivalent
+  Other: 90 USD equivalent
+
+Flight class: Economy for flights under 5 hours; Business class permitted for flights
+exceeding 5 hours or if the employee must work immediately upon arrival. Silknet's
+preferred booking platform is Booking.com Corporate (access via the intranet).
+
+Accommodation cap: 200 USD per night (up to 3 stars; 4-star if client-facing trip).
+
+Travel insurance: Silknet provides automatic Aldagi corporate travel insurance for all
+approved business trips. Employees must register the trip in the HR portal to activate
+coverage.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. CORPORATE CREDIT CARD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Corporate TBC Visa cards are issued to department heads and employees who travel more
+than 4 times per year. Card limit: 3,000 GEL/month by default (adjustable with CFO
+approval). Monthly statements must be reconciled within 5 working days of month end.
+Personal purchases on the corporate card are a disciplinary offence.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. NON-COMPLIANT CLAIMS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Finance may reject any claim that lacks receipts, exceeds policy limits without
+prior approval, or is submitted after the 10-day deadline. Rejected claims are
+returned with a written reason. The employee may resubmit with a VP exception
+approval within 5 working days.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Contact: finance@silknet.com | Finance Helpdesk ext. 1020
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

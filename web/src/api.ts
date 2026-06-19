@@ -86,8 +86,23 @@ export type SendMessageResult = {
 };
 
 export type JiraStatus = { configured: boolean; site: string | null };
-export type JiraIssueSummary = { key: string; summary: string; status: string; issueType: string };
-export type JiraIssueDetail = JiraIssueSummary & { description: string };
+export type JiraIssueSummary = {
+  key: string; summary: string; status: string; issueType: string;
+  assignee?: string | null; priority?: string | null;
+};
+export type JiraUser = { accountId: string; displayName: string; email: string | null; avatarUrl: string | null };
+export type JiraComment = { author: string; body: string; created: string };
+export type JiraTransition = { id: string; name: string; toStatus: string };
+export type JiraIssueDetail = JiraIssueSummary & {
+  description: string;
+  assignee?: JiraUser | null;
+  reporter?: JiraUser | null;
+  priority?: string | null;
+  created?: string | null;
+  updated?: string | null;
+  labels?: string[] | null;
+  comments?: JiraComment[] | null;
+};
 
 export type AuditEntry = {
   id: number;
@@ -266,12 +281,27 @@ export const api = {
     list: (search?: string) =>
       request<JiraIssueSummary[]>(`/api/jira/issues${search ? `?search=${encodeURIComponent(search)}` : ""}`),
     get: (key: string) => request<JiraIssueDetail>(`/api/jira/issues/${encodeURIComponent(key)}`),
+    assignable: (key: string) =>
+      request<JiraUser[]>(`/api/jira/issues/${encodeURIComponent(key)}/assignable`),
+    assign: (key: string, accountId: string, displayName: string) =>
+      request<{ assigned: boolean }>(`/api/jira/issues/${encodeURIComponent(key)}/assignee`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId, displayName }),
+      }),
+    comment: (key: string, text: string) =>
+      request<{ commented: boolean }>(`/api/jira/issues/${encodeURIComponent(key)}/comment`, jsonBody({ text })),
+    transitions: (key: string) =>
+      request<JiraTransition[]>(`/api/jira/issues/${encodeURIComponent(key)}/transitions`),
+    transition: (key: string, transitionId: string, name: string) =>
+      request<{ transitioned: boolean }>(`/api/jira/issues/${encodeURIComponent(key)}/transition`,
+        jsonBody({ transitionId, name })),
   },
 
   // --- business-process automations ---
   // Each takes the agent's structured chat output and triggers the real-world action.
   processes: {
     status: () => request<ProcessStatus>("/api/processes/status"),
+    listManagers: () => request<ManagerDto[]>("/api/processes/managers"),
 
     submitLeave: (d: any, managerEmail?: string) =>
       request<{ sent: boolean; to: string; calendarAttached: boolean }>(
@@ -315,10 +345,46 @@ export const api = {
     contractAlert: (d: any) =>
       request<{ alerted: boolean; channel: string }>("/api/processes/contract/alert", jsonBody(contractPayload(d))),
     contractReport: (d: any) => downloadPdf("/api/processes/contract/report", contractPayload(d), "contract-risk-review.pdf"),
+
+    // --- Jira ticket moves: ask Miriani to draft, then perform the reviewed action ---
+    jiraDraft: (action: "alert" | "email" | "report", ticket: JiraIssueDetail, managerName?: string) =>
+      request<{ action: string; structured: any }>("/api/processes/jira/draft",
+        jsonBody({ action, ticket: jiraTicketContext(ticket), managerName: managerName ?? null })),
+    jiraAlert: (key: string, d: { title?: string; message: string; severity?: string }) =>
+      request<{ alerted: boolean; channel: string }>("/api/processes/jira/alert",
+        jsonBody({ key, title: d.title ?? null, message: d.message, severity: d.severity ?? null })),
+    jiraEmail: (key: string, managerEmail: string, d: { subject?: string; body: string }) =>
+      request<{ sent: boolean; to: string }>("/api/processes/jira/email",
+        jsonBody({ key, managerEmail, subject: d.subject ?? null, body: d.body })),
+    jiraReport: (key: string, d: any) =>
+      downloadPdf("/api/processes/jira/report", {
+        key,
+        title: d.title ?? null,
+        severity: d.severity ?? null,
+        summary: d.summary ?? null,
+        impact: d.impact ?? null,
+        status: d.status ?? null,
+        rootCauseHypothesis: d.root_cause_hypothesis ?? d.rootCauseHypothesis ?? null,
+        recommendedActions: d.recommended_actions ?? d.recommendedActions ?? [],
+      }, `ticket-report-${key}.pdf`),
   },
 };
 
+/** Compact a fetched ticket into the context the AI drafting endpoint expects. */
+function jiraTicketContext(t: JiraIssueDetail) {
+  return {
+    key: t.key,
+    summary: t.summary,
+    status: t.status,
+    issueType: t.issueType,
+    priority: t.priority ?? null,
+    description: t.description ?? "",
+    comments: (t.comments ?? []).map((c) => ({ author: c.author, body: c.body })),
+  };
+}
+
 export type ProcessStatus = { email: boolean; jira: boolean; jiraCanCreate: boolean; notifications: boolean };
+export type ManagerDto = { id: string; displayName: string; email: string };
 
 function invoicePayload(d: any, clientEmail: string | null) {
   return {

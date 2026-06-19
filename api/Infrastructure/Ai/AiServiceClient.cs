@@ -50,6 +50,7 @@ public class AiServiceClient(HttpClient http) : IAiService
         Guid orgId, UserRole role, string query,
         IReadOnlyList<AiTurn>? history = null,
         string? attachmentText = null, string? attachmentName = null,
+        string? userName = null,
         CancellationToken ct = default)
     {
         var payload = new
@@ -60,6 +61,7 @@ public class AiServiceClient(HttpClient http) : IAiService
             history = history?.Select(t => new { sender = t.Sender, content = t.Content }).ToList(),
             attachment_text = string.IsNullOrWhiteSpace(attachmentText) ? null : attachmentText,
             attachment_name = string.IsNullOrWhiteSpace(attachmentName) ? null : attachmentName,
+            user_name = string.IsNullOrWhiteSpace(userName) ? null : userName,
         };
 
         var resp = await http.PostAsJsonAsync("/agent/run", payload, ct);
@@ -83,6 +85,34 @@ public class AiServiceClient(HttpClient http) : IAiService
         var body = await resp.Content.ReadFromJsonAsync<ExtractBody>(ct)
                    ?? new ExtractBody(fileName, "", 0, false);
         return new AiExtractResult(body.File_Name, body.Text, body.Chars, body.Truncated);
+    }
+
+    public async Task<IReadOnlyDictionary<string, object>?> DraftJiraActionAsync(
+        Guid orgId, UserRole role, string action, AiJiraTicket ticket,
+        string? managerName = null, CancellationToken ct = default)
+    {
+        var payload = new
+        {
+            org_id = orgId.ToString(),
+            role_level = (int)role,
+            action,
+            ticket = new
+            {
+                key = ticket.Key,
+                summary = ticket.Summary,
+                status = ticket.Status,
+                issue_type = ticket.IssueType,
+                priority = ticket.Priority,
+                description = ticket.Description,
+                comments = ticket.Comments.Select(c => new { author = c.Author, body = c.Body }).ToList(),
+            },
+            manager_name = string.IsNullOrWhiteSpace(managerName) ? null : managerName,
+        };
+
+        var resp = await http.PostAsJsonAsync("/jira/draft", payload, ct);
+        resp.EnsureSuccessStatusCode();
+        var body = await resp.Content.ReadFromJsonAsync<JiraDraftBody>(ct);
+        return body?.Structured;
     }
 
     public async Task<string> ConnectDbAsync(Guid orgId, string connectionString, CancellationToken ct = default)
@@ -138,4 +168,5 @@ public class AiServiceClient(HttpClient http) : IAiService
         string Route, string Answer, bool Used_Context, List<SourceBody> Sources,
         Dictionary<string, object>? Structured);
     private record SourceBody(string Doc_Id, string File_Name, int Chunk_Index, double Distance, string Text);
+    private record JiraDraftBody(string Action, Dictionary<string, object>? Structured);
 }

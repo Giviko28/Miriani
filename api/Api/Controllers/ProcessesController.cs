@@ -1,9 +1,13 @@
+using Application.Ai;
 using Application.Common;
 using Application.Email;
 using Application.Jira;
 using Application.Processes;
+using Domain.Enums;
+using Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Api.Controllers;
@@ -23,9 +27,11 @@ public class ProcessesController(
     IPdfService pdf,
     ICalendarService calendar,
     INotificationService notifications,
+    IAiService ai,
     IAuditLogger audit,
     ICurrentUser currentUser,
-    IOptions<ProcessOptions> processOptions) : ControllerBase
+    IOptions<ProcessOptions> processOptions,
+    AppDbContext db) : ControllerBase
 {
     private readonly ProcessOptions _proc = processOptions.Value;
 
@@ -38,6 +44,18 @@ public class ProcessesController(
         jiraCanCreate = true, // always — falls back to a local placeholder key
         notifications = notifications.IsConfigured,
     });
+
+    /// <summary>List users with the Manager role in the current org (for the manager picker).</summary>
+    [HttpGet("managers")]
+    public async Task<IActionResult> ListManagers(CancellationToken ct)
+    {
+        var managers = await db.Users
+            .Where(u => u.OrgId == currentUser.OrgId && u.Role == UserRole.Manager && u.IsActive)
+            .OrderBy(u => u.DisplayName)
+            .Select(u => new { u.Id, u.DisplayName, u.Email })
+            .ToListAsync(ct);
+        return Ok(managers);
+    }
 
     // ---------- 1. Leave approval: email the manager + attach an .ics hold ----------
 
@@ -185,6 +203,76 @@ public class ProcessesController(
         return Ok(new { alerted = delivered, channel = delivered ? "sent" : "no webhook configured" });
     }
 
+    // ---------- Jira ticket moves: draft with AI, then act (alert / email / report) ----------
+
+    /// <summary>Ask Miriani to draft an action over a ticket (alert/email/report) for the user to review.</summary>
+    [HttpPost("jira/draft")]
+    public async Task<IActionResult> DraftJiraAction(JiraDraftRequest req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Action)) return BadRequest(new { error = "An action is required." });
+        var ticket = new AiJiraTicket(
+            req.Ticket.Key, req.Ticket.Summary, req.Ticket.Status, req.Ticket.IssueType,
+            req.Ticket.Priority, req.Ticket.Description ?? "",
+            (req.Ticket.Comments ?? new()).Select(c => new AiJiraComment(c.Author, c.Body)).ToList());
+        try
+        {
+            var structured = await ai.DraftJiraActionAsync(
+                currentUser.OrgId, currentUser.Role, req.Action, ticket, req.ManagerName, ct);
+            return Ok(new { action = req.Action, structured });
+        }
+        catch (HttpRequestException ex)
+        {
+            return Problem($"AI service unavailable: {ex.Message}");
+        }
+    }
+
+    /// <summary>Broadcast a Slack/Teams alert about a ticket (after the user reviewed the draft).</summary>
+    [HttpPost("jira/alert")]
+    public async Task<IActionResult> JiraAlert(JiraAlertRequest req, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(req.Message)) return BadRequest(new { error = "Alert message is required." });
+        var title = FirstNonEmpty(req.Title, $"Ticket {req.Key}");
+        var text = string.IsNullOrWhiteSpace(req.Key) ? req.Message : $"[{req.Key}] {req.Message}";
+
+        var delivered = await notifications.NotifyAsync(title, text, ct);
+        await audit.LogAsync(currentUser.OrgId, currentUser.UserId, "process.jira.alert",
+            $"{req.Key} ({req.Severity}){(delivered ? "" : " (no webhook configured)")}", ct);
+
+        return Ok(new { alerted = delivered, channel = delivered ? "sent" : "no webhook configured" });
+    }
+
+    /// <summary>Email a manager about a ticket (after the user reviewed the draft).</summary>
+    [HttpPost("jira/email")]
+    public async Task<IActionResult> JiraEmail(JiraEmailRequest req, CancellationToken ct)
+    {
+        if (!email.IsConfigured) return BadRequest(new { error = "Outbound email is not configured." });
+        var to = FirstNonEmpty(req.ManagerEmail, _proc.DefaultManagerEmail);
+        if (string.IsNullOrWhiteSpace(to) || !to.Contains('@'))
+            return BadRequest(new { error = "A valid manager email is required." });
+        if (string.IsNullOrWhiteSpace(req.Body)) return BadRequest(new { error = "Email body is required." });
+
+        var subject = FirstNonEmpty(req.Subject, $"Update on {req.Key}");
+        await email.SendAsync(new SendEmailRequest(to, subject, req.Body), ct);
+        await audit.LogAsync(currentUser.OrgId, currentUser.UserId, "process.jira.email",
+            $"{req.Key} → {to}", ct);
+
+        return Ok(new { sent = true, to });
+    }
+
+    /// <summary>Render a ticket report to PDF for download.</summary>
+    [HttpPost("jira/report")]
+    public IActionResult JiraReport(JiraReportRequest req)
+    {
+        var doc = new TicketReportDoc(
+            FirstNonEmpty(req.Key, "TICKET"),
+            FirstNonEmpty(req.Title, "Support ticket report"),
+            FirstNonEmpty(req.Severity, "Medium"),
+            req.Summary ?? "", req.Impact ?? "", req.Status ?? "",
+            req.RootCauseHypothesis ?? "", req.RecommendedActions ?? new());
+        var bytes = pdf.RenderTicketReport(doc);
+        return File(bytes, "application/pdf", $"ticket-report-{Slug(req.Key)}.pdf");
+    }
+
     // ---------- helpers ----------
 
     private static string FirstNonEmpty(string? a, string b) => string.IsNullOrWhiteSpace(a) ? b : a!.Trim();
@@ -233,3 +321,21 @@ public record ContractRequest(
         (Clauses ?? new()).Select(c => new ContractClause(c.Clause, c.Risk, c.Finding)).ToList(),
         Recommendations ?? new());
 }
+
+// ----- Jira ticket move shapes -----
+
+public record JiraTicketComment(string Author, string Body);
+
+public record JiraTicketContext(
+    string Key, string Summary, string Status, string IssueType,
+    string? Priority, string? Description, List<JiraTicketComment>? Comments);
+
+public record JiraDraftRequest(string Action, JiraTicketContext Ticket, string? ManagerName);
+
+public record JiraAlertRequest(string Key, string? Title, string Message, string? Severity);
+
+public record JiraEmailRequest(string Key, string? ManagerEmail, string? Subject, string Body);
+
+public record JiraReportRequest(
+    string Key, string? Title, string? Severity, string? Summary, string? Impact,
+    string? Status, string? RootCauseHypothesis, List<string>? RecommendedActions);

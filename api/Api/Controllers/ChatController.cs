@@ -65,7 +65,7 @@ public class ChatController(IChatService chat, IAiService ai, ICurrentUser curre
 
         try
         {
-            return Ok(await chat.SendAsync(currentUser.OrgId, currentUser.UserId, currentUser.Role, req, ct));
+            return Ok(await chat.SendAsync(currentUser.OrgId, currentUser.UserId, currentUser.Role, currentUser.DisplayName, req, ct));
         }
         catch (KeyNotFoundException ex)
         {

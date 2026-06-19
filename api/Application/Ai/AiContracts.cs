@@ -20,6 +20,14 @@ public record AiAgentAnswer(
     IReadOnlyList<AiSource> Sources,
     IReadOnlyDictionary<string, object>? Structured);
 
+/// <summary>One comment on a ticket, passed to the AI as drafting context.</summary>
+public record AiJiraComment(string Author, string Body);
+
+/// <summary>An existing Jira ticket's content, passed to the AI to draft an action over it.</summary>
+public record AiJiraTicket(
+    string Key, string Summary, string Status, string IssueType,
+    string? Priority, string Description, IReadOnlyList<AiJiraComment> Comments);
+
 /// <summary>
 /// Gateway to the Python AI service. The .NET layer always supplies org and role from the
 /// authenticated caller — the AI service never decides access on its own.
@@ -42,6 +50,7 @@ public interface IAiService
         Guid orgId, UserRole role, string query,
         IReadOnlyList<AiTurn>? history = null,
         string? attachmentText = null, string? attachmentName = null,
+        string? userName = null,
         CancellationToken ct = default);
 
     /// <summary>
@@ -49,6 +58,15 @@ public interface IAiService
     /// attachments). Returns the extracted text; nothing is embedded or persisted.
     /// </summary>
     Task<AiExtractResult> ExtractAttachmentAsync(string fileName, byte[] data, CancellationToken ct = default);
+
+    /// <summary>
+    /// Draft an AI action (Slack alert / manager email / report) over an existing Jira ticket,
+    /// grounded in the ticket text plus role-scoped company knowledge. The draft is reviewed by the
+    /// human before the gateway performs the real side-effect; the ticket is never stored/embedded.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, object>?> DraftJiraActionAsync(
+        Guid orgId, UserRole role, string action, AiJiraTicket ticket,
+        string? managerName = null, CancellationToken ct = default);
 
     /// <summary>Connect the org's external DB: introspect schema and cache it in the AI service.</summary>
     Task<string> ConnectDbAsync(Guid orgId, string connectionString, CancellationToken ct = default);

@@ -11,7 +11,7 @@ public class AuthServiceTests
 {
     private sealed class FakeTokens : ITokenService
     {
-        public (string Token, DateTime ExpiresAt) CreateToken(Guid userId, Guid orgId, string email, UserRole role)
+        public (string Token, DateTime ExpiresAt) CreateToken(Guid userId, Guid orgId, string email, UserRole role, string displayName)
             => ("access-" + Guid.NewGuid(), DateTime.UtcNow.AddMinutes(15));
     }
 

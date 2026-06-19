@@ -1,8 +1,8 @@
-"""Specialized agents — one per automated business process.
+"""Specialized agents — one per business capability.
 
-Each is a LangGraph node: it reads the request (and the caller's role-scoped context
-where useful) and produces an answer. Generative agents (email/report) draft text;
-invoice_gen produces structured JSON.
+Each is a LangGraph node: reads the request (and caller's role-scoped context where useful)
+and produces an answer. Kept agents: greeting, policy_qa, email_draft, ticket_triage,
+ticket_advice, db_query.
 """
 
 import json
@@ -13,10 +13,9 @@ from app.db import schema_cache
 from app.llm.client import generate
 from app.rag import service as rag
 
-# Miriani's character — injected into every specialist system prompt.
 _PERSONA = (
-    "You are Miriani, a warm and professional AI business assistant. "
-    "You go by Mirian for short. "
+    "You are Miriani, a warm and professional AI assistant for Silknet, Georgia's leading "
+    "telecom operator. You go by Mirian for short. "
     "You are knowledgeable, reliable, and genuinely enjoy helping people. "
     "You keep a friendly but professional tone at all times. "
     "If someone asks who you are, introduce yourself as Miriani. "
@@ -42,8 +41,28 @@ def _retrieve(state: AgentState):
     )
 
 
+async def _check_required(query: str, history_block: str, required: str) -> str | None:
+    """Return a clarifying question if the request is missing required info, else None."""
+    raw = (await generate(
+        f"{history_block}User request: {query}\n\nRequired information: {required}\n\n"
+        "Does the user request contain ALL of the required information listed above?\n"
+        "Reply with exactly one of:\n"
+        "SUFFICIENT\n"
+        "MISSING: <short comma-separated list of what is absent>",
+        system="You check whether a request contains required information. Reply only with SUFFICIENT or MISSING: <list>.",
+        temperature=0.0,
+        num_predict=64,
+    )).strip()
+    if raw.upper().startswith("MISSING:"):
+        missing = raw[len("MISSING:"):].strip()
+        return (
+            f"I'd be happy to help with that! To get started, I just need a few details:\n\n"
+            f"**{missing}**\n\nCould you provide these?"
+        )
+    return None
+
+
 def _history_block(state: AgentState) -> str:
-    """Render recent conversation turns so the model can interpret follow-ups."""
     history = state.get("history") or []
     if not history:
         return ""
@@ -56,7 +75,6 @@ def _attachment_text(state: AgentState) -> str:
 
 
 def _attachment_block(state: AgentState) -> str:
-    """Render the ephemeral attached file (this message only) as prompt context."""
     att = _attachment_text(state)
     if not att:
         return ""
@@ -64,14 +82,23 @@ def _attachment_block(state: AgentState) -> str:
     return f"Attached file for THIS message only — '{name}':\n{att}\n\n"
 
 
+def _user_block(state: AgentState) -> str:
+    name = (state.get("user_name") or "").strip()
+    if not name:
+        return ""
+    return f"The person you are speaking with is: {name}.\n\n"
+
+
 async def greeting(state: AgentState) -> AgentState:
-    """Respond to greetings, introductions, and casual conversation as Miriani."""
+    """Respond to greetings and introductions as Miriani."""
     prompt = (
-        f"{_history_block(state)}"
+        f"{_history_block(state)}{_user_block(state)}"
         f"The user said: {state['query']}\n\n"
         "Always start by introducing yourself as Miriani (or Mirian for short). "
-        "Greet them back warmly, acknowledge their name if they gave one, and briefly mention "
-        "what you can help with (company policies, document summaries, emails, reports, invoices). "
+        "Greet them back warmly, use their name if you know it, and briefly mention "
+        "what you can help with: company policies and SLA documentation, "
+        "drafting professional emails, filing IT support tickets, and pulling incident reports "
+        "from the operations database. "
         "Keep it short, friendly, and natural — 2 to 4 sentences, no bullet lists."
     )
     reply = await generate(
@@ -101,191 +128,89 @@ async def policy_qa(state: AgentState) -> AgentState:
     }
 
 
-async def doc_summary(state: AgentState) -> AgentState:
-    """Summarize the most relevant company content (or an attached file) for the request."""
-    att = _attachment_text(state)
-    sources = _retrieve(state)
-    if not sources and not att:
-        return {"answer": "I couldn't find any matching documents to summarize.",
-                "used_context": False, "sources": [], "structured": None}
-
-    context = (_attachment_block(state) + "\n\n".join(s.text for s in sources)).strip()
-    prompt = (
-        f"{_history_block(state)}"
-        f"Summarize the following content into 3-5 concise bullet points.\n\n{context}"
-    )
-    reply = await generate(prompt, system=_PERSONA + "You are a precise business summarizer. Use only the given content.")
-    return {"answer": reply, "used_context": True, "sources": _sources_to_dicts(sources), "structured": None}
-
-
 async def email_draft(state: AgentState) -> AgentState:
     """Draft a business email for the request, grounded in any relevant context."""
+    clarify = await _check_required(
+        state["query"], _history_block(state),
+        "who the email is addressed to (recipient name or company), and the main topic or purpose",
+    )
+    if clarify:
+        return {"answer": clarify, "used_context": False, "sources": [], "structured": None}
+
     sources = _retrieve(state)
     context = "\n\n".join(s.text for s in sources)
     context_block = f"Relevant company context:\n{context}\n\n" if context else ""
+    user = (state.get("user_name") or "").strip()
+    sign_instruction = f" Sign the email as {user}." if user else ""
     prompt = (
-        f"{_history_block(state)}{_attachment_block(state)}{context_block}"
+        f"{_history_block(state)}{_user_block(state)}{_attachment_block(state)}{context_block}"
         f"Write a professional business email for this request:\n{state['query']}\n\n"
-        "Include a subject line. Keep it concise and courteous."
+        f"Include a subject line. Keep it concise and courteous.{sign_instruction}\n\n"
+        "IMPORTANT: Use only facts explicitly stated in the request or the context above. "
+        "Do not invent names, dates, figures, or details that were not provided."
     )
-    reply = await generate(prompt, system=_PERSONA + "You draft clear, professional business emails.", temperature=0.6)
+    reply = await generate(
+        prompt,
+        system=_PERSONA + "You draft clear, professional business emails. You never invent facts — if a detail is not in the request or context, you leave a placeholder like [client name] instead of guessing.",
+        temperature=0.35,
+    )
     return {"answer": reply, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
 
 
-async def report_draft(state: AgentState) -> AgentState:
-    """Draft a short business report, grounded in relevant company context."""
+async def ticket_triage(state: AgentState) -> AgentState:
+    """Triage an IT/support request into a structured ticket ready to file in Jira."""
     sources = _retrieve(state)
     context = "\n\n".join(s.text for s in sources)
-    context_block = f"Use this company context where relevant:\n{context}\n\n" if context else ""
+    context_block = f"Relevant internal knowledge (use to suggest a resolution):\n{context}\n\n" if context else ""
     prompt = (
         f"{_history_block(state)}{_attachment_block(state)}{context_block}"
-        f"Write a structured business report for this request:\n{state['query']}\n\n"
-        "Use clear headings (Summary, Details, Recommendations)."
-    )
-    reply = await generate(prompt, system=_PERSONA + "You write structured, factual business reports.", temperature=0.45)
-    return {"answer": reply, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
-
-
-async def invoice_gen(state: AgentState) -> AgentState:
-    """Produce a structured invoice (JSON) from the details in the request."""
-    prompt = (
-        f"{_attachment_block(state)}"
-        "Extract invoice details from the request and return ONLY a JSON object with keys: "
-        "client (string), items (array of {description, quantity, unit_price}), "
-        "currency (string), notes (string). Compute nothing; just extract. "
-        f"If a field is missing, use null or an empty array.\n\nRequest:\n{state['query']}"
-    )
-    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.", temperature=0.1, json_mode=True)
-
-    structured = _parse_json(raw)
-    if structured is None:
-        return {"answer": raw, "used_context": False, "sources": [], "structured": None}
-
-    # Compute totals server-side (don't trust the LLM with arithmetic). Be tolerant of
-    # the LLM's key naming (quantity/qty/_quantity, unit_price/price/rate/_unit_price).
-    total = 0.0
-    for item in structured.get("items") or []:
-        if not isinstance(item, dict):
-            continue
-        qty = _find_number(item, ("quantity", "qty", "units", "hours", "days"))
-        price = _find_number(item, ("unit_price", "price", "rate", "amount", "cost"))
-        total += qty * price
-    structured["total"] = round(total, 2)
-
-    summary = f"Invoice for {structured.get('client') or 'client'} — total {structured['total']} {structured.get('currency') or ''}".strip()
-    return {"answer": summary, "used_context": False, "sources": [], "structured": structured}
-
-
-def _db_vacation_context(org_id: str, query: str) -> str:
-    """Query the connected DB for existing vacation/leave records near the requested dates."""
-    cached = schema_cache.load(org_id)
-    if not cached:
-        return ""
-    schema = cached["schema"]
-    conn_str = cached["connection_string"]
-    vacation_table = next(
-        (t["name"] for t in schema.get("tables", [])
-         if t["name"].lower() in ("vacations", "leaves", "leave_requests", "time_off", "absences")),
-        None,
-    )
-    if not vacation_table:
-        return ""
-    try:
-        rows = db_connector.execute_select(conn_str, f"SELECT * FROM {vacation_table} LIMIT 50")
-        if not rows:
-            return f"\nThe {vacation_table} table is empty (no scheduled leave yet).\n"
-        rows_text = json.dumps(rows, indent=2, default=str)
-        return f"\nExisting records from the {vacation_table} table:\n{rows_text}\n"
-    except Exception:
-        return ""
-
-
-async def leave_request(state: AgentState) -> AgentState:
-    """Process a leave request: check policy + live DB schedule, assess eligibility, generate formal letter."""
-    sources = _retrieve(state)
-    context = "\n\n".join(s.text for s in sources)
-    context_block = f"Company leave policy:\n{context}\n\n" if context else ""
-    db_block = _db_vacation_context(state["org_id"], state["query"])
-    prompt = (
-        f"{_history_block(state)}{_attachment_block(state)}{context_block}"
-        f"{db_block}"
-        f"Employee leave request: {state['query']}\n\n"
-        "Extract the request details and assess eligibility against any policy provided. "
-        "If existing leave records are shown, check for scheduling conflicts. "
+        f"Support/IT request: {state['query']}\n\n"
+        "Triage this into a support ticket. "
         "Return ONLY a JSON object with keys: "
-        "employee_name (string or null), start_date (string), end_date (string), "
-        "days_requested (number), status (one of: approved, pending, flagged), "
-        "policy_note (string — one sentence explaining the policy check result), "
-        "conflict_note (string or null — mention any scheduling conflicts found in the DB), "
-        "formal_letter (string — a short formal leave request letter the employee can send). "
-        "If no policy is available, set status to pending and note that HR review is needed."
+        "summary (string — a short one-line ticket title), "
+        "description (string — a clear restatement of the problem with any troubleshooting steps to try), "
+        "priority (one of: Low, Medium, High, Critical — infer urgency from the wording), "
+        "issue_type (one of: Bug, Task, Incident, Service Request), "
+        "category (string — e.g. Network, Hardware, Access, Software, Other)."
     )
     raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.", temperature=0.1, json_mode=True)
     structured = _parse_json(raw)
     if structured is None:
         return {"answer": raw, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
     summary = (
-        f"Leave request for {structured.get('days_requested', '?')} day(s) "
-        f"({structured.get('start_date', '')} – {structured.get('end_date', '')}): "
-        f"{structured.get('status', 'pending').upper()}. {structured.get('policy_note', '')}"
+        "I've drafted a support ticket for you. Take a look at the details below — "
+        "if everything looks right, click **Create Jira ticket** to file it."
     )
-    return {"answer": summary, "used_context": bool(context or db_block), "sources": _sources_to_dicts(sources), "structured": structured}
-
-
-async def onboarding_gen(state: AgentState) -> AgentState:
-    """Generate a role-specific onboarding checklist grounded in company policy docs."""
-    sources = _retrieve(state)
-    context = "\n\n".join(s.text for s in sources)
-    context_block = f"Company policies and procedures:\n{context}\n\n" if context else ""
-    prompt = (
-        f"{_history_block(state)}{_attachment_block(state)}{context_block}"
-        f"Onboarding request: {state['query']}\n\n"
-        "Generate a structured onboarding plan. "
-        "Return ONLY a JSON object with keys: "
-        "role (string), employee_name (string or null), start_date (string or null), "
-        "day_1 (array of strings — tasks for the first day), "
-        "week_1 (array of strings — tasks for the first week), "
-        "month_1 (array of strings — tasks for the first month). "
-        "Base tasks on the company policies where available. Aim for 4-6 items per phase."
-    )
-    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.", temperature=0.1, json_mode=True)
-    structured = _parse_json(raw)
-    if structured is None:
-        return {"answer": raw, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
-    role = structured.get("role") or "new employee"
-    total = (
-        len(structured.get("day_1") or []) +
-        len(structured.get("week_1") or []) +
-        len(structured.get("month_1") or [])
-    )
-    summary = f"Onboarding plan for {role} — {total} tasks across Day 1, Week 1, and Month 1."
     return {"answer": summary, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": structured}
 
 
-async def contract_scan(state: AgentState) -> AgentState:
-    """Scan a vendor contract or agreement for risks relative to company policy."""
+async def ticket_advice(state: AgentState) -> AgentState:
+    """Reason about how to approach/resolve an EXISTING support ticket."""
     sources = _retrieve(state)
     context = "\n\n".join(s.text for s in sources)
-    context_block = f"Available company documents (policies and/or contract content):\n{context}\n\n" if context else ""
+    context_block = (
+        f"Relevant company knowledge (use it where it applies and say when you are):\n{context}\n\n"
+        if context else
+        "No directly relevant company documents were found for this issue.\n\n"
+    )
     prompt = (
         f"{_history_block(state)}{_attachment_block(state)}{context_block}"
-        f"Contract scan request: {state['query']}\n\n"
-        "Analyze the documents for contractual risks relative to company policy. "
-        "Return ONLY a JSON object with keys: "
-        "overall_risk (one of: Low, Medium, High), "
-        "clauses (array of objects, each with: clause (string), risk (Low/Medium/High), finding (string)), "
-        "recommendations (array of strings — concrete next steps). "
-        "If no contract content is found, set overall_risk to Medium and note that a document should be uploaded."
+        f"The user already has this support ticket and is asking how to approach it:\n{state['query']}\n\n"
+        "Reason through it and give a practical, actionable answer:\n"
+        "- A brief diagnosis of the most likely cause.\n"
+        "- Clear step-by-step actions to resolve it (or to investigate further).\n"
+        "- Who to involve or escalate to if those steps don't resolve it.\n\n"
+        "Lean on the company knowledge above where it applies and say so; where the documents "
+        "don't cover it, use sound general IT/support best practice and note that. "
+        "The ticket already exists — do NOT suggest creating or filing a new one. "
+        "Be concise and concrete; prefer short numbered steps."
     )
-    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.", temperature=0.1, json_mode=True)
-    structured = _parse_json(raw)
-    if structured is None:
-        return {"answer": raw, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
-    overall = structured.get("overall_risk", "Unknown")
-    n_clauses = len(structured.get("clauses") or [])
-    high = sum(1 for c in (structured.get("clauses") or []) if c.get("risk") == "High")
-    summary = f"Contract scan complete — overall risk: {overall}. {n_clauses} clause(s) reviewed, {high} high-risk finding(s)."
-    return {"answer": summary, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": structured}
+    reply = await generate(
+        prompt,
+        system=_PERSONA + "You are an experienced IT/support advisor. You reason through problems and give practical, step-by-step resolutions.",
+        temperature=0.3,
+    )
+    return {"answer": reply, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
 
 
 async def db_explore(state: AgentState) -> AgentState:
@@ -301,7 +226,6 @@ async def db_explore(state: AgentState) -> AgentState:
     schema = cached["schema"]
     tables = schema.get("tables", [])
 
-    # Sample up to 5 rows from each table to give the LLM concrete examples.
     samples: list[str] = []
     for table in tables:
         try:
@@ -321,9 +245,7 @@ async def db_explore(state: AgentState) -> AgentState:
         "Write it as a single cohesive paragraph per table, no bullet lists."
     )
     summary = await generate(prompt, system=_PERSONA + "You write precise, factual database descriptions.")
-
     schema_cache.save_summary(state["org_id"], summary)
-
     table_names = ", ".join(t["name"] for t in tables)
     return {
         "answer": f"I've explored and memorized the database. Here's what I found:\n\n{summary}",
@@ -350,19 +272,15 @@ async def db_query(state: AgentState) -> AgentState:
     saved_summary = cached.get("summary", "")
     schema_text = db_connector.render_schema(schema)
 
-    # The model's training cutoff makes it assume an older "current" year (e.g. 2023),
-    # so it would filter on the wrong year for "this year"/relative-date questions.
-    # Anchor it to the real system date.
     from datetime import date
     _today = date.today()
     date_hint = (
         f"IMPORTANT: Today's date is {_today.isoformat()} (the current year is {_today.year}). "
-        f"Do NOT assume any other year. For relative dates like 'this year', 'next month', "
-        f"or 'currently', reason from {_today.isoformat()} and prefer the database's own "
+        f"Do NOT assume any other year. For relative dates like 'this week', 'today', "
+        f"or 'recently', reason from {_today.isoformat()} and prefer the database's own "
         f"current-date function over hard-coding a year.\n"
     )
 
-    # Tell the LLM which dialect to use so it picks the right date functions.
     if conn_str.startswith("sqlite"):
         dialect_hint = "Database type: SQLite. Use date('now') for today, NOT CURDATE() or NOW(). Use strftime() for date formatting."
     elif conn_str.startswith("postgresql"):
@@ -375,12 +293,12 @@ async def db_query(state: AgentState) -> AgentState:
     context_block = f"Database description:\n{saved_summary}\n\n" if saved_summary else ""
     sqlite_examples = (
         "SQLite date examples:\n"
-        "  currently on vacation:  WHERE v.start_date <= date('now') AND v.end_date >= date('now')\n"
-        "  in July:                WHERE strftime('%m', v.start_date) = '07'\n"
-        "  in July 2026:           WHERE strftime('%m', v.start_date) = '07' AND strftime('%Y', v.start_date) = '2026'\n"
-        "  upcoming:               WHERE v.start_date > date('now')\n"
+        "  incidents this week:  WHERE created_at >= date('now', '-7 days')\n"
+        "  open P1s:             WHERE severity = 'P1' AND status != 'Resolved'\n"
+        "  resolved today:       WHERE date(resolved_at) = date('now')\n"
         "  NEVER use MONTH(), YEAR(), CURDATE(), NOW(), GETDATE() — SQLite does not support them.\n"
     ) if conn_str.startswith("sqlite") else ""
+
     sql_prompt = (
         f"{context_block}"
         f"{date_hint}"
@@ -389,7 +307,8 @@ async def db_query(state: AgentState) -> AgentState:
         f"Database schema:\n{schema_text}\n\n"
         f"Question: {state['query']}\n\n"
         "Write a single valid SELECT SQL query. "
-        "For month/period questions do NOT add a current-date range filter. "
+        "CRITICAL: only reference tables and columns that appear in the schema above — "
+        "never invent or assume extra tables. Keep the query simple and direct. "
         "Output only the SQL, no explanation, no code fences, no trailing semicolon."
     )
     sql = (await generate(sql_prompt, system="You output only a valid SQL SELECT statement, nothing else.", temperature=0.0)).strip().rstrip(";")
@@ -398,8 +317,6 @@ async def db_query(state: AgentState) -> AgentState:
     try:
         rows = db_connector.execute_select(conn_str, sql)
     except Exception as exc:
-        # Self-correction: feed the error back once so the model can repair the query,
-        # the same way a stronger reasoner would recover from a failed attempt.
         repair_prompt = (
             f"{date_hint}"
             f"{dialect_hint}\n{sqlite_examples}"
@@ -426,12 +343,12 @@ async def db_query(state: AgentState) -> AgentState:
     answer_prompt = (
         f"{_history_block(state)}"
         f"{context_block}"
-        f"(For reference, today's date is {_today.isoformat()}.)\n"
+        f"(Today is {_today.isoformat()}.)\n"
         f"Question: {state['query']}\n\n"
         f"Data retrieved ({len(rows)} row(s)):\n{result_text}\n\n"
-        "Answer the question directly and naturally, as if you simply know this information. "
+        "Answer the question directly and naturally. "
         "Do NOT mention SQL, queries, databases, or how you retrieved the data. "
-        "Just give a clean, friendly answer. If 0 rows, say no one matches and keep it brief."
+        "Just give a clean, friendly answer. If 0 rows, say nothing matched and keep it brief."
     )
     answer = await generate(answer_prompt, system=_PERSONA + "You answer questions naturally. Never mention SQL, queries, or databases in your response.", temperature=0.3)
 
@@ -444,7 +361,7 @@ async def db_query(state: AgentState) -> AgentState:
 
 
 def _autocorrect_sql(sql: str, conn_str: str) -> str:
-    """Fix common cross-dialect function mistakes the model makes for SQLite."""
+    """Fix common cross-dialect mistakes the model makes for SQLite."""
     if not conn_str.startswith("sqlite"):
         return sql
     import re as _re
@@ -452,26 +369,10 @@ def _autocorrect_sql(sql: str, conn_str: str) -> str:
     sql = _re.sub(r'\bNOW\(\)', "datetime('now')", sql, flags=_re.IGNORECASE)
     sql = _re.sub(r'\bGETDATE\(\)', "datetime('now')", sql, flags=_re.IGNORECASE)
     sql = _re.sub(r'\bCURRENT_TIMESTAMP\b', "datetime('now')", sql, flags=_re.IGNORECASE)
-    # MONTH(col) → CAST(strftime('%m', col) AS INTEGER)
     sql = _re.sub(r'\bMONTH\(([^)]+)\)', lambda m: f"CAST(strftime('%m', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
-    # YEAR(col) → CAST(strftime('%Y', col) AS INTEGER)
     sql = _re.sub(r'\bYEAR\(([^)]+)\)', lambda m: f"CAST(strftime('%Y', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
-    # DAY(col) → CAST(strftime('%d', col) AS INTEGER)
     sql = _re.sub(r'\bDAY\(([^)]+)\)', lambda m: f"CAST(strftime('%d', {m.group(1)}) AS INTEGER)", sql, flags=_re.IGNORECASE)
     return sql
-
-
-def _find_number(item: dict, names: tuple[str, ...]) -> float:
-    """Find a numeric value in an item dict by trying several key names (and a
-    case-insensitive, underscore-stripped match) so totals survive LLM key drift."""
-    for key, value in item.items():
-        normalized = key.lower().strip("_")
-        if normalized in names:
-            try:
-                return float(value)
-            except (TypeError, ValueError):
-                return 0.0
-    return 0.0
 
 
 def _parse_json(raw: str) -> dict | None:
@@ -488,45 +389,11 @@ def _parse_json(raw: str) -> dict | None:
         return None
 
 
-async def ticket_triage(state: AgentState) -> AgentState:
-    """Triage an IT/support request into a structured ticket ready to file in Jira."""
-    sources = _retrieve(state)
-    context = "\n\n".join(s.text for s in sources)
-    context_block = f"Relevant internal knowledge (use to suggest a resolution):\n{context}\n\n" if context else ""
-    prompt = (
-        f"{_history_block(state)}{_attachment_block(state)}{context_block}"
-        f"Support/IT request: {state['query']}\n\n"
-        "Triage this into a support ticket. "
-        "Return ONLY a JSON object with keys: "
-        "summary (string — a short one-line ticket title), "
-        "description (string — a clear restatement of the problem with any troubleshooting steps to try), "
-        "priority (one of: Low, Medium, High, Critical — infer urgency from the wording), "
-        "issue_type (one of: Bug, Task, Incident, Service Request), "
-        "category (string — e.g. Network, Hardware, Access, Software, Other)."
-    )
-    raw = await generate(prompt, system="You output only valid JSON, no prose, no code fences.", temperature=0.1, json_mode=True)
-    structured = _parse_json(raw)
-    if structured is None:
-        return {"answer": raw, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
-    summary = (
-        f"Ticket ready: \"{structured.get('summary', 'Support request')}\" "
-        f"[{structured.get('priority', 'Medium')} · {structured.get('issue_type', 'Task')}]. "
-        "Review the details and create it in Jira."
-    )
-    return {"answer": summary, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": structured}
-
-
-# Map agent keys to their node functions (consumed by the graph builder).
 SPECIALISTS = {
-    "greeting": greeting,
-    "policy_qa": policy_qa,
-    "doc_summary": doc_summary,
-    "email_draft": email_draft,
-    "report_draft": report_draft,
-    "invoice_gen": invoice_gen,
-    "leave_request": leave_request,
-    "onboarding_gen": onboarding_gen,
-    "contract_scan": contract_scan,
-    "db_query": db_query,
+    "greeting":      greeting,
+    "policy_qa":     policy_qa,
+    "email_draft":   email_draft,
     "ticket_triage": ticket_triage,
+    "ticket_advice": ticket_advice,
+    "db_query":      db_query,
 }

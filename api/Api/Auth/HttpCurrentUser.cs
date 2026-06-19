@@ -20,6 +20,10 @@ public class HttpCurrentUser(IHttpContextAccessor accessor) : ICurrentUser
     public UserRole Role =>
         Enum.TryParse<UserRole>(Principal?.FindFirstValue(ClaimTypes.Role), out var r) ? r : UserRole.Employee;
 
+    public string DisplayName =>
+        Principal?.FindFirstValue(JwtRegisteredClaimNames.Name) ?? 
+        Principal?.FindFirstValue(ClaimTypes.Name) ?? "";
+
     private Guid? GetGuid(string claimType) =>
         Guid.TryParse(Principal?.FindFirstValue(claimType), out var g) ? g : null;
 }
