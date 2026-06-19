@@ -18,9 +18,11 @@ RUN dotnet publish Api/Api.csproj -c Release -o /app --no-restore
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-# QuestPDF renders via SkiaSharp, which needs native font/graphics libs on Linux.
+# QuestPDF renders via SkiaSharp (needs native font/graphics libs); Npgsql probes for
+# Kerberos/GSSAPI on connect (libgssapi-krb5-2) — install both so neither logs errors.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libfontconfig1 libfreetype6 fonts-dejavu-core \
+    && apt-get install -y --no-install-recommends \
+        libfontconfig1 libfreetype6 fonts-dejavu-core libgssapi-krb5-2 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /app ./
