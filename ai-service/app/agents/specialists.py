@@ -213,6 +213,56 @@ async def ticket_advice(state: AgentState) -> AgentState:
     return {"answer": reply, "used_context": bool(context), "sources": _sources_to_dicts(sources), "structured": None}
 
 
+async def doc_qa(state: AgentState) -> AgentState:
+    """Reason about and answer questions concerning an attached file's contents.
+
+    This is the default handler whenever a file is attached and the user isn't asking for a
+    concrete side-effect (email/ticket). Unlike policy_qa's strict KB-citation grounding, this
+    agent genuinely reasons over the attachment — summarizing, analyzing, extracting, comparing,
+    or answering questions about what the document actually says.
+    """
+    attachment = _attachment_text(state)
+    if not attachment:
+        # No file present — fall back to grounded policy QA so behaviour never regresses.
+        return await policy_qa(state)
+
+    # Pull any role-scoped KB context as a secondary aid (e.g. comparing the file to policy).
+    sources = _retrieve(state)
+    context = "\n\n".join(s.text for s in sources)
+    context_block = (
+        f"Additional company knowledge (secondary — use only where it's relevant to the request):\n{context}\n\n"
+        if context else ""
+    )
+    name = state.get("attachment_name") or "the attached file"
+    prompt = (
+        f"{_history_block(state)}{_user_block(state)}"
+        f"Attached file — '{name}':\n{attachment}\n\n"
+        f"{context_block}"
+        f"The user's request about this file:\n{state['query']}\n\n"
+        "Read the file carefully and respond by reasoning over its ACTUAL contents. "
+        "Quote concrete figures, names, dates, clauses, or section titles from the file where "
+        "they support your answer. If the request is to summarize, give the key points. If it's "
+        "a question, answer it directly from the file. If the request is open-ended, explain what "
+        "the document is and its most important content. If the file genuinely does not contain "
+        "what's being asked, say so plainly instead of inventing details."
+    )
+    reply = await generate(
+        prompt,
+        system=_PERSONA + (
+            "You carefully read the documents users attach and reason about their contents to "
+            "answer. Every claim you make is grounded in what the document actually says; you "
+            "never fabricate figures or clauses that aren't there."
+        ),
+        temperature=0.3,
+    )
+    return {
+        "answer": reply,
+        "used_context": bool(context),
+        "sources": _sources_to_dicts(sources),
+        "structured": None,
+    }
+
+
 async def db_explore(state: AgentState) -> AgentState:
     """Explore every table in the connected DB, build a natural-language description, and save it."""
     cached = schema_cache.load(state["org_id"])
@@ -396,4 +446,5 @@ SPECIALISTS = {
     "ticket_triage": ticket_triage,
     "ticket_advice": ticket_advice,
     "db_query":      db_query,
+    "doc_qa":        doc_qa,
 }

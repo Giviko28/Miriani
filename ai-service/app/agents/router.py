@@ -126,6 +126,7 @@ async def route(state: AgentState) -> AgentState:
     """Decide which specialized agent handles the request."""
     query = state["query"]
     history = state.get("history") or []
+    has_attachment = bool((state.get("attachment_text") or "").strip())
 
     # "How should I approach ticket OPS-2?" is a request to REASON about an existing ticket,
     # not to file a new one — route it to the advisor before the ticket_triage keywords fire.
@@ -149,5 +150,12 @@ async def route(state: AgentState) -> AgentState:
             num_predict=16,
         )).strip().lower()
         choice = next((k for k in AGENT_KEYS if k in raw), "policy_qa")
+
+    # When a file is attached the user almost always wants reasoning ABOUT that file. Keep the
+    # explicit action routes that already consume the attachment (email/ticket); send everything
+    # else to the document reasoner so the file's contents are actually used, instead of landing
+    # on an agent that ignores it (db_query/greeting) or policy_qa's strict KB-citation grounding.
+    if has_attachment and choice not in ("email_draft", "ticket_triage", "ticket_advice"):
+        choice = "doc_qa"
 
     return {"route": choice}
